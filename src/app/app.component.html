@@ -1,12 +1,8 @@
 <button (click)="addItem()">Add</button>
-<div class="list">
-  <div class="list-holder">
-    <ul>
-      <li *infiniteFor="let item of data; let i = index">
-        {{ item }}
-        <button (click)="removeData(item)">remove</button>
-        <button (click)="changeData(i)">change</button>
-      </li>
-    </ul>
+<infinite-list>
+  <div *infiniteFor="let item of data; let i = index">
+    {{ item }}
+    <button (click)="removeData(item)">remove</button>
+    <button (click)="changeData(i)">change</button>
   </div>
-</div>
+</infinite-list>

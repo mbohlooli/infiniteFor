@@ -6,8 +6,13 @@ import { Component, ElementRef, TemplateRef, ViewChild, ViewContainerRef } from 
   styleUrls: ['./app.component.css']
 })
 export class AppComponent {
-  // data = Array(10000).fill(Math.random());
-  data = [1, 2, 3, 4];
+  data = [1];
+
+  constructor() {
+    for (let i = 0; i < 10000; i++) {
+      this.data.push(i + 2);
+    }
+  }
 
   addItem() {
     this.data.push(this.data.length + 1);

@@ -20,50 +20,73 @@ export class AppComponent implements OnInit {
   viewportHeight: number = 500;
   previousStartIndex = 0;
   previousEndIndex = Math.ceil(500 / this.rowHeight);
+  map = new Map();
 
   constructor(private renderer: Renderer2) {
     for (let i = 0; i < 1000; i++)
       this.items.push(i);
     this.paddingBottom = this.totalPadding = this.items.length * this.rowHeight;
   }
-
+  //TODO: dont intialize all divs at first, initialize when scrolled
+  //TODO: for removing stage use a hashmap, the divs get in hashmap when inserted to be uniquely identified
   ngOnInit() {
     this.renderer.setStyle(this.scrollContainer?.element?.nativeElement, 'padding-top', `${this.paddingTop}px`);
     this.renderer.setStyle(this.scrollContainer?.element?.nativeElement, 'padding-bottom', `${this.paddingBottom}px`);
-    for (let i = 0; i < this.items.length; i++) {
+    // for (let i = 0; i < this.items.length; i++) {
+    //   let div = this.renderer.createElement("div");
+    //   this.renderer.setStyle(div, 'height', `${this.rowHeight}px`);
+    //   this.renderer.setStyle(div, 'width', `100%`);
+    //   this.renderer.setStyle(div, 'border-bottom', '1px solid blue')
+    //   this.renderer.setStyle(div, 'position', 'absolute');
+    //   this.renderer.appendChild(div, this.renderer.createText(`${i}`));
+    //   this.divs.push(div);
+    // }
+
+    for (let i = this.previousStartIndex; i < this.previousEndIndex; i++) {
       let div = this.renderer.createElement("div");
       this.renderer.setStyle(div, 'height', `${this.rowHeight}px`);
       this.renderer.setStyle(div, 'width', `100%`);
       this.renderer.setStyle(div, 'border-bottom', '1px solid blue')
       this.renderer.setStyle(div, 'position', 'absolute');
       this.renderer.appendChild(div, this.renderer.createText(`${i}`));
-      this.divs.push(div);
-    }
-
-    for (let i = this.previousStartIndex; i < this.previousEndIndex; i++) {
-      this.renderer.setStyle(this.divs[i], 'transform', `translate3d(0, ${this.rowHeight * i}px, 0)`);
-      this.renderer.appendChild(this.scrollContainer?.element.nativeElement, this.divs[i]);
+      this.renderer.setStyle(div, 'transform', `translate3d(0, ${i * this.rowHeight}px, 0)`);
+      // this.scrollContainer?.insert(this.divs[i]);
+      this.renderer.appendChild(this.scrollContainer?.element.nativeElement, div);
+      this.map.set(i, div);
     }
   }
 
   onScroll() {
     const scrollTop = this.viewport?.nativeElement.scrollTop;
-    console.log('scrollTop', scrollTop);
+    const scrollTopMax = this.viewport?.nativeElement.scrollTopMax;
     if (!scrollTop) return;
     this.paddingTop = scrollTop;
     this.paddingBottom = this.totalPadding - this.paddingTop;
     let startIndex = Math.floor(scrollTop / this.rowHeight);
     let endIndex = startIndex + Math.ceil((500 + this.paddingTop - startIndex * this.rowHeight) / this.rowHeight);
     console.log(startIndex, endIndex);
+    console.log(this.map)
 
+    if (scrollTop == scrollTopMax) console.log('load more items!');
     for (let i = this.previousStartIndex; i < this.previousEndIndex; i++) {
-      this.renderer.removeChild(this.scrollContainer?.element.nativeElement, this.divs[i]);
+      if (this.map.has(i)) {
+        this.renderer.removeChild(this.scrollContainer?.element.nativeElement, this.map.get(i));
+        // this.map.delete(i);
+      }
     }
 
     for (let i = startIndex; i < Math.min(endIndex + 5, this.items.length); i++) {
-      this.renderer.setStyle(this.divs[i], 'transform', `translate3d(0, ${this.rowHeight * (i - startIndex) - (scrollTop % this.rowHeight)}px, 0)`);
+
+      let div = this.renderer.createElement("div");
+      this.renderer.setStyle(div, 'height', `${this.rowHeight}px`);
+      this.renderer.setStyle(div, 'width', `100%`);
+      this.renderer.setStyle(div, 'border-bottom', '1px solid blue')
+      this.renderer.setStyle(div, 'position', 'absolute');
+      this.renderer.appendChild(div, this.renderer.createText(`${i}`));
+      this.renderer.setStyle(div, 'transform', `translate3d(0, ${this.rowHeight * (i - startIndex) - (scrollTop % this.rowHeight)}px, 0)`);
       // this.scrollContainer?.insert(this.divs[i]);
-      this.renderer.appendChild(this.scrollContainer?.element.nativeElement, this.divs[i]);
+      this.renderer.appendChild(this.scrollContainer?.element.nativeElement, div);
+      this.map.set(i, div);
     }
 
     this.renderer.setStyle(this.scrollContainer?.element.nativeElement, 'padding-top', `${this.paddingTop}px`);

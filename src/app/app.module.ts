@@ -3,14 +3,12 @@ import { NgModule } from '@angular/core';
 import { BrowserModule } from '@angular/platform-browser';
 
 import { AppComponent } from './app.component';
-import { InfiniteForDirective } from './infinite-for.directive';
-import { InfiniteListComponent } from './infinite-list/infinite-list.component';
+import { InfiniteScrollDirective } from './infinite-scroll.directive';
 
 @NgModule({
   declarations: [
-    InfiniteForDirective,
     AppComponent,
-    InfiniteListComponent,
+    InfiniteScrollDirective,
   ],
   imports: [
     CommonModule,

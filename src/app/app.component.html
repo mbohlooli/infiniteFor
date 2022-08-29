@@ -1,8 +1,7 @@
-<button (click)="addItem()">Add</button>
-<infinite-list>
-  <div *infiniteFor="let item of data; let i = index">
-    {{ item }}
-    <button (click)="removeData(item)">remove</button>
-    <button (click)="changeData(i)">change</button>
-  </div>
-</infinite-list>
+<div class="infinite-list" (scroll)="onScroll()" #viewport>
+  <div class="infinite-list-holder" #scrollContainer></div>
+</div>
+
+<ng-template #listItem>
+  <div class="list-item">hello there!</div>
+</ng-template>

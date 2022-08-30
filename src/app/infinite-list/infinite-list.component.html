@@ -1,0 +1,20 @@
+<div
+  class="infinite-list"
+  #v
+  infiniteScroll
+  [viewport]="viewport"
+  [listHolder]="listHolder"
+  [scrollContainer]="scrollContainer"
+  [items]="items"
+  [rowHeight]="rowHeight"
+  [viewportHeight]="viewportHeight"
+  [listItem]="li"
+>
+  <div class="infinite-list-holder" #l>
+    <ng-container #s></ng-container>
+  </div>
+</div>
+
+<ng-template #li>
+  <div class="list-item">hello there!</div>
+</ng-template>

@@ -1,5 +1,7 @@
 <div class="infinite-list" (scroll)="onScroll()" #viewport>
-  <div class="infinite-list-holder" #scrollContainer></div>
+  <div class="infinite-list-holder" #listHolder>
+    <ng-container #scrollContainer></ng-container>
+  </div>
 </div>
 
 <ng-template #listItem>

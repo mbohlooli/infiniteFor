@@ -50,7 +50,7 @@ export class InfiniteScrollDirective implements AfterViewInit, OnChanges {
     this.paddingBottom = this.totalPadding - this.paddingTop;
 
     let startIndex = Math.floor(scrollTop / this.rowHeight);
-    let endIndex = 3 + startIndex + Math.ceil((500 + this.paddingTop - startIndex * this.rowHeight) / this.rowHeight);
+    let endIndex = startIndex + Math.ceil((500 + this.paddingTop - startIndex * this.rowHeight) / this.rowHeight);
 
 
     // console.log('scrolled');

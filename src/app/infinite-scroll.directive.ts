@@ -23,7 +23,6 @@ export class InfiniteScrollDirective implements AfterViewInit, OnChanges {
   initialized: boolean = false;
 
   constructor(private renderer: Renderer2) {
-    // console.log('hello');
     this.paddingBottom = this.totalPadding = (this.items.length - 3) * this.rowHeight;
 
   }
@@ -56,9 +55,10 @@ export class InfiniteScrollDirective implements AfterViewInit, OnChanges {
   ngAfterViewInit() {
     this.renderer.setStyle(this.listHolder?.nativeElement, 'padding-top', `${this.paddingTop}px`);
     this.renderer.setStyle(this.listHolder?.nativeElement, 'padding-bottom', `${this.paddingBottom}px`);
-    for (let i = this.previousStartIndex; i < this.previousEndIndex; i++) {
+    for (let i = this.previousStartIndex; i <= this.previousEndIndex; i++) {
       let view = this.listItem.createEmbeddedView({ index: i });
       view.rootNodes[0].style.transform = `translate3d(0, ${i * this.rowHeight}px, 0)`;
+      view.rootNodes[0].style.backgroundColor = `rgb(${12 * i}, ${7 * i}, ${10 * i})`;
       this.scrollContainer.insert(view);
       this.map.set(i, view);
     }
@@ -84,21 +84,23 @@ export class InfiniteScrollDirective implements AfterViewInit, OnChanges {
       return;
     }
 
-    // TODO: make the other way scroll
     //TODO: store the previous scroll
     //TODO: if the elements are the same also update position (all cases need this)
-    if (this.previousStartIndex <= startIndex) {
+    if (this.previousStartIndex < startIndex) {
       console.log('=====CHECK1=====');
       for (let i = this.previousStartIndex; i < startIndex; i++)
+        // ! Initial scroll error is in the line below
         this.scrollContainer.detach(i - this.previousStartIndex);
       console.log('=====CHECK2=====');
       for (let i = startIndex; i < this.previousEndIndex; i++)
         (this.scrollContainer.get(i - startIndex) as EmbeddedViewRef<any>).rootNodes[0].style.transform =
           `translate3d(0, ${(i - startIndex) * this.rowHeight - (scrollTop % this.rowHeight)}px, 0)`;
-      for (let i = this.previousEndIndex; i < Math.min(endIndex + 5, this.items.length); i++) {
+      for (let i = this.previousEndIndex; i <= endIndex; i++) {
         if (!this.map.has(i)) {
           let view = this.listItem.createEmbeddedView({ index: i });
           view.rootNodes[0].style.transform = `translate3d(0, ${(i - startIndex) * this.rowHeight - (scrollTop % this.rowHeight)}px, 0)`;
+          view.rootNodes[0].style.backgroundColor = `rgb(${12 * i}, ${7 * i}, ${10 * i})`;
+
           this.scrollContainer.insert(view);
           this.map.set(i, view);
           view.reattach();
@@ -109,7 +111,7 @@ export class InfiniteScrollDirective implements AfterViewInit, OnChanges {
             this.scrollContainer.insert(view);
         }
       }
-    } else {
+    } else if (this.previousStartIndex > startIndex) {
       for (let i = endIndex + 1; i < this.previousEndIndex; i++)
         this.scrollContainer.detach(i - this.previousStartIndex);
       for (let i = this.previousStartIndex; i <= endIndex; i++)
@@ -119,6 +121,7 @@ export class InfiniteScrollDirective implements AfterViewInit, OnChanges {
         if (!this.map.has(i)) {
           let view = this.listItem.createEmbeddedView({ index: i });
           view.rootNodes[0].style.transform = `translate3d(0, ${(i - startIndex) * this.rowHeight - (scrollTop % this.rowHeight)}px, 0)`;
+          view.rootNodes[0].style['background-color'] = `rgb(10 * i, 15 *i, 15 *i)`;
           this.scrollContainer.insert(view, 0);
           this.map.set(i, view);
           view.reattach();
@@ -129,44 +132,11 @@ export class InfiniteScrollDirective implements AfterViewInit, OnChanges {
             this.scrollContainer.insert(view, 0);
         }
       }
-      // //TODO: think more about the numbers (especially when removing)
-      // for (let i = this.previousStartIndex - 1; i >= Math.max(startIndex - 5, 0); i--)
-      //   if (!this.map.has(i)) {
-      //     let view = this.listItem.createEmbeddedView({ index: i });
-      //     view.rootNodes[0].style.transform = `translate3d(0, ${(i - startIndex) * this.rowHeight - (scrollTop % this.rowHeight)}px, 0)`;
-      //     this.scrollContainer.insert(view, 0);
-      //     this.map.set(i, view);
-      //     view.reattach();
-      //   } else {
-      //     let view = this.map.get(i);
-      //     (view as EmbeddedViewRef<any>).rootNodes[0].style.transform = `translate3d(0, ${(i - startIndex) * this.rowHeight - (scrollTop % this.rowHeight)}px, 0)`;
-      //     if (view)
-      //       this.scrollContainer.insert(view, 0);
-      //   }
-      // for (let i = this.previousStartIndex - startIndex; i < endIndex - startIndex; i++)
-      //   (this.scrollContainer.get(i) as EmbeddedViewRef<any>).rootNodes[0].style.transform =
-      //     `translate3d(0, ${(i) * this.rowHeight - (scrollTop % this.rowHeight)}px, 0)`;
-      // for (let i = endIndex - startIndex; i <= this.previousEndIndex - startIndex; i++)
-      //   this.scrollContainer.detach(i);
+    } else {
+      for (let i = 0; i < this.scrollContainer.length; i++)
+        (this.scrollContainer.get(i) as EmbeddedViewRef<any>).rootNodes[0].style.transform =
+          `translate3d(0, ${(i) * this.rowHeight - (scrollTop % this.rowHeight)}px, 0)`;
     }
-
-    // for (let i = 0; i < this.scrollContainer.length; i++)
-    //   this.scrollContainer.detach(i);
-
-    // for (let i = startIndex; i < Math.min(endIndex + 5, this.items.length); i++) {
-    //   if (!this.map.has(i)) {
-    //     let view = this.listItem.createEmbeddedView({ index: i });
-    //     view.rootNodes[0].style.transform = `translate3d(0, ${(i - startIndex) * this.rowHeight - (scrollTop % this.rowHeight)}px, 0)`;
-    //     this.scrollContainer.insert(view);
-    //     this.map.set(i, view);
-    //     view.reattach();
-    //   } else {
-    //     let view = this.map.get(i);
-    //     (view as EmbeddedViewRef<any>).rootNodes[0].style.transform = `translate3d(0, ${(i - startIndex) * this.rowHeight - (scrollTop % this.rowHeight)}px, 0)`;
-    //     if (view)
-    //       this.scrollContainer.insert(view);
-    //   }
-    // }
 
     this.renderer.setStyle(this.listHolder.nativeElement, 'padding-top', `${this.paddingTop}px`);
     this.renderer.setStyle(this.listHolder.nativeElement, 'padding-bottom', `${this.paddingBottom}px`);

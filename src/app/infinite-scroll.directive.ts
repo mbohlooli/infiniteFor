@@ -76,29 +76,19 @@ export class InfiniteScrollDirective implements AfterViewInit, OnChanges {
         this.scrollContainer.detach(i);
       for (let i = startIndex; i <= endIndex; i++) {
         let view = this.getView(i);
-        view.rootNodes[0].style.transform = this.getPositionOnScreen(i - startIndex, scrollTop);
         this.scrollContainer.insert(view);
         view.reattach();
       }
     } else {
       const scrollDown = this.previousStartIndex < startIndex;
       const scrollUp = this.previousStartIndex > startIndex;
-      //TODO: store the previous scroll
-      //TODO: use the behaviour subject for this scrolling
-      //TODO: step_1)window scroll service
+
       if (scrollDown) {
-        //! what if user scrolles to end and trigger this
-        //! then scroll top
-        //! then scroll down
-        //! booom!
         if (this.loading) return;
         for (let i = this.previousStartIndex; i < startIndex; i++)
           this.scrollContainer.detach(i - this.previousStartIndex);
-        for (let i = startIndex; i < this.previousEndIndex; i++)
-          this.placeScrollItemAt(i - startIndex, i - startIndex, scrollTop);
         for (let i = this.previousEndIndex; i <= endIndex; i++) {
           let view = this.getView(i);
-          view.rootNodes[0].style.transform = this.getPositionOnScreen(i - startIndex, scrollTop);
           this.scrollContainer.insert(view);
           view.reattach();
         }
@@ -108,18 +98,15 @@ export class InfiniteScrollDirective implements AfterViewInit, OnChanges {
         if (this.loading) this.loading = false;
         for (let i = endIndex + 1; i <= this.previousEndIndex; i++)
           this.scrollContainer.detach(i - this.previousStartIndex);
-        for (let i = this.previousStartIndex; i <= endIndex; i++)
-          this.placeScrollItemAt(i - this.previousStartIndex, i - this.previousStartIndex, scrollTop);
         for (let i = startIndex; i < this.previousStartIndex; i++) {
           let view = this.getView(i);
-          view.rootNodes[0].style.transform = this.getPositionOnScreen(i - startIndex, scrollTop);
           this.scrollContainer.insert(view, 0);
           view.reattach();
         }
-      } else
-        for (let i = 0; i < this.scrollContainer.length; i++)
-          this.placeScrollItemAt(i, i, scrollTop);
+      }
     }
+
+    this.placeViews(scrollTop);
 
 
     this.renderer.setStyle(this.listHolder.nativeElement, 'padding-top', `${this.paddingTop}px`);
@@ -135,6 +122,11 @@ export class InfiniteScrollDirective implements AfterViewInit, OnChanges {
     let startIndex = Math.floor(scrollTop / this.rowHeight);
     let endIndex = startIndex + Math.ceil((500 + this.paddingTop - startIndex * this.rowHeight) / this.rowHeight);
     return { startIndex, endIndex };
+  }
+
+  placeViews(scrollTop: number) {
+    for (let i = 0; i < this.scrollContainer.length; i++)
+      this.placeScrollItemAt(i, i, scrollTop);
   }
 
   getPositionOnScreen(position: number, scrollTop: number): string {

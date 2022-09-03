@@ -26,8 +26,10 @@ export class InfiniteScrollDirective implements AfterViewInit, OnChanges {
   initialized: boolean = false;
   previousScrollTop: number = 0;
 
-  constructor(private renderer: Renderer2, private windowScrollingService: WindowScrollingService) {
-  }
+  constructor(
+    private renderer: Renderer2,
+    private windowScrollingService: WindowScrollingService
+  ) { }
 
   ngOnChanges(changes: SimpleChanges): void {
     const scrollTop = 0;
@@ -40,7 +42,7 @@ export class InfiniteScrollDirective implements AfterViewInit, OnChanges {
     this.renderer.setStyle(this.listHolder?.nativeElement, 'padding-top', `${this.paddingTop}px`);
     this.renderer.setStyle(this.listHolder?.nativeElement, 'padding-bottom', `${this.paddingBottom}px`);
     for (let i = this.previousStartIndex; i <= this.previousEndIndex; i++) {
-      let view = this.getView(i) as EmbeddedViewRef<any>;
+      let view = this.getView(i);
       view.rootNodes[0].style.transform = `translate3d(0, ${i * this.rowHeight}px, 0)`;
       this.scrollContainer.insert(view);
       view.reattach();
@@ -73,8 +75,8 @@ export class InfiniteScrollDirective implements AfterViewInit, OnChanges {
       for (let i = 0; i < this.scrollContainer.length; i++)
         this.scrollContainer.detach(i);
       for (let i = startIndex; i <= endIndex; i++) {
-        let view = this.getView(i) as EmbeddedViewRef<any>;
-        view.rootNodes[0].style.transform = this.getVisibleRange(i - startIndex);
+        let view = this.getView(i);
+        view.rootNodes[0].style.transform = this.getPositionOnScreen(i - startIndex, scrollTop);
         this.scrollContainer.insert(view);
         view.reattach();
       }
@@ -93,35 +95,30 @@ export class InfiniteScrollDirective implements AfterViewInit, OnChanges {
         for (let i = this.previousStartIndex; i < startIndex; i++)
           this.scrollContainer.detach(i - this.previousStartIndex);
         for (let i = startIndex; i < this.previousEndIndex; i++)
-          (this.scrollContainer.get(i - startIndex) as EmbeddedViewRef<any>).rootNodes[0].style.transform =
-            this.getVisibleRange(i - startIndex);
+          this.placeScrollItemAt(i - startIndex, i - startIndex, scrollTop);
         for (let i = this.previousEndIndex; i <= endIndex; i++) {
-          let view = this.getView(i) as EmbeddedViewRef<any>;
-          view.rootNodes[0].style.transform = this.getVisibleRange(i - startIndex);
+          let view = this.getView(i);
+          view.rootNodes[0].style.transform = this.getPositionOnScreen(i - startIndex, scrollTop);
           this.scrollContainer.insert(view);
           view.reattach();
         }
       } else if (scrollUp) {
         //! The problem is that is doesnt delete some items probably from bottom
+        //TODO: set some id or sth on the divs and then see if the i detach
         if (this.loading) this.loading = false;
-        for (let i = endIndex + 1; i <= this.previousEndIndex; i++) {
-          //TODO: set some id or sth on the divs and then see if the i detach
+        for (let i = endIndex + 1; i <= this.previousEndIndex; i++)
           this.scrollContainer.detach(i - this.previousStartIndex);
-        }
         for (let i = this.previousStartIndex; i <= endIndex; i++)
-          (this.scrollContainer.get(i - this.previousStartIndex) as EmbeddedViewRef<any>).rootNodes[0].style.transform =
-            this.getVisibleRange(i - this.previousStartIndex);
+          this.placeScrollItemAt(i - this.previousStartIndex, i - this.previousStartIndex, scrollTop);
         for (let i = startIndex; i < this.previousStartIndex; i++) {
-          let view = this.getView(i) as EmbeddedViewRef<any>;
-          //TODO: refactor this string
-          view.rootNodes[0].style.transform = this.getVisibleRange(i - startIndex);
+          let view = this.getView(i);
+          view.rootNodes[0].style.transform = this.getPositionOnScreen(i - startIndex, scrollTop);
           this.scrollContainer.insert(view, 0);
           view.reattach();
         }
       } else
         for (let i = 0; i < this.scrollContainer.length; i++)
-          (this.scrollContainer.get(i) as EmbeddedViewRef<any>).rootNodes[0].style.transform =
-            this.getVisibleRange(i);
+          this.placeScrollItemAt(i, i, scrollTop);
     }
 
 
@@ -144,12 +141,21 @@ export class InfiniteScrollDirective implements AfterViewInit, OnChanges {
     return `translate3d(0, ${position * this.rowHeight - (scrollTop % this.rowHeight)}px, 0)`
   }
 
-  getView(index: number): ViewRef {
+  getView(index: number): EmbeddedViewRef<any> {
     let view = this.map.get(index);
     if (!view) {
       view = this.listItem.createEmbeddedView({ index });
       this.map.set(index, view);
     }
-    return view;
+    return view as EmbeddedViewRef<any>;
+  }
+
+  getScrollContainerItemAt(index: number) {
+    return this.scrollContainer.get(index) as EmbeddedViewRef<any>;
+  }
+
+  placeScrollItemAt(originalIndex: number, indexToPut: number, scrollTop: number): any {
+    this.getScrollContainerItemAt(originalIndex).rootNodes[0].style.transform =
+      this.getPositionOnScreen(indexToPut, scrollTop);
   }
 }

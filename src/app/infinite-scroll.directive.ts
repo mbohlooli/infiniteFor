@@ -71,6 +71,9 @@ export class InfiniteScrollDirective implements AfterViewInit, OnChanges {
     }
 
     const fastScroll = this.previousEndIndex < startIndex || this.previousStartIndex > endIndex;
+    const scrollDown = this.previousStartIndex < startIndex;
+    const scrollUp = this.previousStartIndex > startIndex;
+
     if (fastScroll) {
       for (let i = 0; i < this.scrollContainer.length; i++)
         this.scrollContainer.detach(i);
@@ -79,31 +82,25 @@ export class InfiniteScrollDirective implements AfterViewInit, OnChanges {
         this.scrollContainer.insert(view);
         view.reattach();
       }
-    } else {
-      const scrollDown = this.previousStartIndex < startIndex;
-      const scrollUp = this.previousStartIndex > startIndex;
-
-      if (scrollDown) {
-        if (this.loading) return;
-        for (let i = this.previousStartIndex; i < startIndex; i++)
-          this.scrollContainer.detach(i - this.previousStartIndex);
-        for (let i = this.previousEndIndex; i <= endIndex; i++) {
-          let view = this.getView(i);
-          this.scrollContainer.insert(view);
-          view.reattach();
-        }
-      } else if (scrollUp) {
-        //! The problem is that is doesnt delete some items probably from bottom
-        //TODO: set some id or sth on the divs and then see if the i detach
-        if (this.loading) this.loading = false;
-        for (let i = endIndex + 1; i <= this.previousEndIndex; i++)
-          this.scrollContainer.detach(i - this.previousStartIndex);
-        for (let i = startIndex; i < this.previousStartIndex; i++) {
-          let view = this.getView(i);
-          this.scrollContainer.insert(view, 0);
-          view.reattach();
-        }
+    } else if (scrollDown) {
+      if (this.loading) return;
+      for (let i = this.previousStartIndex; i < startIndex; i++)
+        this.scrollContainer.detach(i - this.previousStartIndex);
+      for (let i = this.previousEndIndex; i <= endIndex; i++) {
+        let view = this.getView(i);
+        this.scrollContainer.insert(view);
+        view.reattach();
       }
+    } else if (scrollUp) {
+      if (this.loading) this.loading = false;
+
+      for (let i = startIndex; i < this.previousStartIndex; i++) {
+        let view = this.getView(i);
+        this.scrollContainer.insert(view, 0);
+        view.reattach();
+      }
+      for (let i = endIndex + 1; i <= startIndex + this.scrollContainer.length - 1; i++)
+        this.scrollContainer.detach(i - startIndex);
     }
 
     this.placeViews(scrollTop);

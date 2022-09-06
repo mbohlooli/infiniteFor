@@ -32,12 +32,10 @@ export class InfiniteScrollDirective implements AfterViewInit, OnChanges {
   ) { }
 
   ngOnChanges(changes: SimpleChanges): void {
-    for (let i = 0; i < this.items.length; i++) {
-      let previousHeight = this.heights[i - 1];
-      this.heights[i] = Math.random() * 200 + 25 + (previousHeight ? previousHeight : 0);
-    }
+    for (let i = 0; i < this.items.length; i++)
+      this.heights[i] = Math.random() * 200 + 25;
     const scrollTop = 0;
-    this.totalPadding = this.heights[this.heights.length - 1] - this.viewportHeight;
+    this.totalPadding = this.sum(this.heights) - this.viewportHeight;
     this.paddingTop = scrollTop;
     this.paddingBottom = this.totalPadding - this.paddingTop;
     // ! Calculate this.previousEndIndex
@@ -59,8 +57,8 @@ export class InfiniteScrollDirective implements AfterViewInit, OnChanges {
     // TODO: replace 10 with a dynamic number
     for (let i = this.previousStartIndex; i <= 10; i++) {
       let view = this.getView(i);
-      view.rootNodes[0].style.transform = `translate3d(0, ${this.heights[i - 1] ? this.heights[i - 1] : 0}px, 0)`;
-      view.rootNodes[0].style.height = `${this.getElementHeight(i)}px  `;
+      view.rootNodes[0].style.transform = `translate3d(0, ${this.sum(this.heights.slice(this.previousStartIndex, i))}px, 0)`;
+      view.rootNodes[0].style.height = `${this.heights[i]}px`;
       this.scrollContainer.insert(view);
       view.reattach();
     }
@@ -82,55 +80,47 @@ export class InfiniteScrollDirective implements AfterViewInit, OnChanges {
     console.log(startIndex, endIndex);
     console.log('old positions', this.previousStartIndex, this.previousEndIndex);
     console.log('scrollTop', scrollTop);
-    if (endIndex >= this.items.length && !this.loading)
+    // ! Fix loading
+    if (endIndex >= this.items.length - 1 && !this.loading)
       this.loadMoreItems();
 
     const fastScroll = this.previousEndIndex < startIndex || this.previousStartIndex > endIndex;
     const scrollDown = this.previousStartIndex < startIndex;
     const scrollUp = this.previousStartIndex > startIndex;
-    // ! Fix the fast scroll
-    for (let i = 0; i < this.scrollContainer.length; i++)
-      this.scrollContainer.detach(i);
-    for (let i = startIndex; i <= endIndex; i++) {
-      let view = this.getView(i);
-      view.rootNodes[0].style.height = `${this.getElementHeight(i)}px`;
-      this.scrollContainer.insert(view);
-      view.reattach();
+
+    if (fastScroll) {
+      // ! Fix the fast scrolling when scrolling all the way to the top
+      for (let i = 0; i < this.scrollContainer.length; i++)
+        this.scrollContainer.detach(i);
+      for (let i = startIndex; i <= endIndex; i++) {
+        let view = this.getView(i);
+        this.scrollContainer.insert(view);
+        view.reattach();
+      }
+    } else if (scrollDown) {
+      if (this.loading) return;
+      for (let i = this.previousStartIndex; i < startIndex; i++)
+        this.scrollContainer.detach(i - this.previousStartIndex);
+      for (let i = this.previousEndIndex; i <= endIndex; i++) {
+        let view = this.getView(i);
+        this.scrollContainer.insert(view);
+        view.reattach();
+      }
+    } else if (scrollUp) {
+      for (let i = startIndex; i < this.previousStartIndex; i++) {
+        let view = this.getView(i);
+        this.scrollContainer.insert(view, 0);
+        view.reattach();
+      }
+      for (let i = endIndex + 1; i <= startIndex + this.scrollContainer.length - 1; i++)
+        this.scrollContainer.detach(i - startIndex);
     }
 
+    // this.placeViews(scrollTop);
+    // TODO: replace the above method with the line below
     for (let i = 0; i < this.scrollContainer.length; i++)
       this.getScrollContainerItemAt(i).rootNodes[0].style.transform =
-        `translate3d(0, ${startIndex + i == 0 ? -scrollTop : this.heights[startIndex + i - 1] - scrollTop}px, 0)`;
-
-    // if (fastScroll) {
-    //   // ! Fix the fast scrolling when scrolling all the way to the top
-    //   for (let i = 0; i < this.scrollContainer.length; i++)
-    //     this.scrollContainer.detach(i);
-    //   for (let i = startIndex; i <= endIndex; i++) {
-    //     let view = this.getView(i);
-    //     this.scrollContainer.insert(view);
-    //     view.reattach();
-    //   }
-    // } else if (scrollDown) {
-    //   if (this.loading) return;
-    //   for (let i = this.previousStartIndex; i < startIndex; i++)
-    //     this.scrollContainer.detach(i - this.previousStartIndex);
-    //   for (let i = this.previousEndIndex; i <= endIndex; i++) {
-    //     let view = this.getView(i);
-    //     this.scrollContainer.insert(view);
-    //     view.reattach();
-    //   }
-    // } else if (scrollUp) {
-    //   for (let i = startIndex; i < this.previousStartIndex; i++) {
-    //     let view = this.getView(i);
-    //     this.scrollContainer.insert(view, 0);
-    //     view.reattach();
-    //   }
-    //   for (let i = endIndex + 1; i <= startIndex + this.scrollContainer.length - 1; i++)
-    //     this.scrollContainer.detach(i - startIndex);
-    // }
-
-    // this.placeViews(scrollTop);
+        `translate3d(0, ${this.sum(this.heights.slice(0, startIndex + i)) - scrollTop}px, 0)`;
     this.setPaddings();
 
     this.previousStartIndex = startIndex;
@@ -142,18 +132,22 @@ export class InfiniteScrollDirective implements AfterViewInit, OnChanges {
     if (!scrollTop) return { startIndex: this.previousStartIndex, endIndex: this.previousEndIndex };
     let startIndex = 0;
     let endIndex = 0;
-    for (let i = 0; i < this.heights.length; i++) {
-      if (this.heights[i] > scrollTop) {
+    let endIndexChanged = false;
+    for (let i = 0; i < this.heights.length; i++)
+      if (this.sum(this.heights.slice(0, i)) >= scrollTop) {
         startIndex = i;
         break;
       }
-    }
-    for (let i = 0; i < this.heights.length; i++) {
-      if (this.heights[i] > scrollTop + this.viewport.nativeElement.offsetHeight) {
+    for (let i = 0; i < this.heights.length; i++)
+      if (this.sum(this.heights.slice(0, i)) >= scrollTop + this.viewport.nativeElement.offsetHeight) {
         endIndex = i;
+        endIndexChanged = true;
         break;
       }
-    }
+    if (!endIndexChanged)
+      endIndex = this.items.length - 1;
+    if (scrollTop < this.heights[0])
+      startIndex = 0;
     return { startIndex, endIndex };
   }
 
@@ -177,7 +171,7 @@ export class InfiniteScrollDirective implements AfterViewInit, OnChanges {
       view = this.listItem.createEmbeddedView({ index });
       this.map.set(index, view);
     }
-    (view as EmbeddedViewRef<any>).rootNodes[0].style.height = this.getElementHeight(index);
+    (view as EmbeddedViewRef<any>).rootNodes[0].style.height = `${this.heights[index]}px`;
     return view as EmbeddedViewRef<any>;
   }
 
@@ -192,6 +186,8 @@ export class InfiniteScrollDirective implements AfterViewInit, OnChanges {
 
   loadMoreItems() {
     this.loading = true;
+    console.log('loading more items...');
+
     //TODO: fix the tiny jump
     // setTimeout(() => {
     //   for (let i = 0; i < 20; i++)
@@ -203,7 +199,10 @@ export class InfiniteScrollDirective implements AfterViewInit, OnChanges {
     // }, 2000);
   }
 
-  getElementHeight(index: number) {
-    return index == 0 ? this.heights[index] : this.heights[index] - this.heights[index - 1];
+  sum(numbers: number[]) {
+    let result = 0;
+    for (let i = 0; i < numbers.length; i++)
+      result += numbers[i];
+    return result;
   }
 }

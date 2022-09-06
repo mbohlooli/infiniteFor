@@ -56,10 +56,11 @@ export class InfiniteScrollDirective implements AfterViewInit, OnChanges {
 
   ngAfterViewInit() {
     this.setPaddings();
+    // TODO: replace 10 with a dynamic number
     for (let i = this.previousStartIndex; i <= 10; i++) {
       let view = this.getView(i);
       view.rootNodes[0].style.transform = `translate3d(0, ${this.heights[i - 1] ? this.heights[i - 1] : 0}px, 0)`;
-      view.rootNodes[0].style.height = `${this.heights[i] - (this.heights[i - 1] ? this.heights[i - 1] : 0)}px  `;
+      view.rootNodes[0].style.height = `${this.getElementHeight(i)}px  `;
       this.scrollContainer.insert(view);
       view.reattach();
     }
@@ -93,11 +94,13 @@ export class InfiniteScrollDirective implements AfterViewInit, OnChanges {
     for (let i = startIndex; i <= endIndex; i++) {
       let view = this.getView(i);
       view.rootNodes[0].style.height = `${this.getElementHeight(i)}px`;
-      view.rootNodes[0].style.transform = `translate3d(0, ${this.heights[Math.max(0, i - 1)] - scrollTop}px, 0)`;
       this.scrollContainer.insert(view);
       view.reattach();
     }
 
+    for (let i = 0; i < this.scrollContainer.length; i++)
+      this.getScrollContainerItemAt(i).rootNodes[0].style.transform =
+        `translate3d(0, ${startIndex + i == 0 ? -scrollTop : this.heights[startIndex + i - 1] - scrollTop}px, 0)`;
 
     // if (fastScroll) {
     //   // ! Fix the fast scrolling when scrolling all the way to the top

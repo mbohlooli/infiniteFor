@@ -4,12 +4,14 @@ import { WindowScrollingService } from './services/window-scrolling.service';
 
 //TODO: we can use a function to get the height of each element
 @Directive({
-  selector: '[infiniteScroll]'
+  selector: '[infiniteScroll][infiniteScrollOf]'
 })
 export class InfiniteScrollDirective implements AfterViewInit, OnInit {
-  @Input('listHolder') listHolder!: ElementRef;
-  @Input('items') items: number[] = [];
-  @Input('viewportHeight') viewportHeight: number = 611;
+  //TODO: get this from somewhere else
+  @Input('infiniteScrollListHolder') listHolder!: ElementRef;
+  @Input('infiniteScrollOf') items: number[] = [];
+  //TODO: make this dynamic
+  @Input('infiniteScrollViewportHeight') viewportHeight: number = 611;
 
   totalPadding: number = 0;
   paddingBottom: number = 0;
@@ -162,7 +164,7 @@ export class InfiniteScrollDirective implements AfterViewInit, OnInit {
   getView(index: number): EmbeddedViewRef<any> {
     let view = this.map.get(index);
     if (!view) {
-      view = this.listItem.createEmbeddedView({ index });
+      view = this.listItem.createEmbeddedView({ $implicit: this.items[index], index });
       this.map.set(index, view);
     }
     (view as EmbeddedViewRef<any>).rootNodes[0].style.height = `${this.heights[index]}px`;
@@ -179,7 +181,7 @@ export class InfiniteScrollDirective implements AfterViewInit, OnInit {
     this.getScrollContainerItemAt(originalIndex).rootNodes[0].style.transform =
       this.getPositionOnScreen(indexToPut, scrollTop);
   }
-
+  //? Make this an output?
   loadMoreItems() {
     this.loading = true;
     console.log('loading more items...');

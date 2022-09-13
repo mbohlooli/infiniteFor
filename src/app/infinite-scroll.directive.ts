@@ -38,7 +38,7 @@ export class InfiniteScrollDirective implements AfterViewInit, OnInit {
     this.totalPadding = this.sum(this.heights) - this.viewportHeight;
     this.paddingTop = scrollTop;
     this.paddingBottom = this.totalPadding - this.paddingTop;
-    // ! Calculate this.previousEndIndex
+
     for (let i = 0; i < this.heights.length; i++)
       if (this.sum(this.heights.slice(0, i)) >= this.viewportHeight) {
         this.previousEndIndex = i;
@@ -51,11 +51,10 @@ export class InfiniteScrollDirective implements AfterViewInit, OnInit {
     this.setPaddings();
     for (let i = this.previousStartIndex; i <= this.previousEndIndex; i++) {
       let view = this.getView(i);
-      view.rootNodes[0].style.transform = `translate3d(0, ${this.sum(this.heights.slice(this.previousStartIndex, this.previousStartIndex + i))}px, 0)`;
-      view.rootNodes[0].style.height = `${this.heights[i]}px`;
       this.scrollContainer.insert(view);
       view.reattach();
     }
+    this.placeViews(0);
     this.windowScrollingService.scrollY$.subscribe(this.scrollTo);
   }
 

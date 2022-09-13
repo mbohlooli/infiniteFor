@@ -7,10 +7,7 @@ import { WindowScrollingService } from './services/window-scrolling.service';
   selector: '[infiniteScroll]'
 })
 export class InfiniteScrollDirective implements AfterViewInit, OnInit {
-  @Input('viewport') viewport!: ElementRef;
   @Input('listHolder') listHolder!: ElementRef;
-  @Input('scrollContainer') scrollContainer!: ViewContainerRef;
-  @Input('listItem') listItem!: TemplateRef<any>;
   @Input('items') items: number[] = [];
   @Input('viewportHeight') viewportHeight: number = 611;
 
@@ -27,7 +24,9 @@ export class InfiniteScrollDirective implements AfterViewInit, OnInit {
 
   constructor(
     private renderer: Renderer2,
-    private windowScrollingService: WindowScrollingService
+    private windowScrollingService: WindowScrollingService,
+    private listItem: TemplateRef<any>,
+    private scrollContainer: ViewContainerRef
   ) { }
 
   ngOnInit(): void {
@@ -56,10 +55,6 @@ export class InfiniteScrollDirective implements AfterViewInit, OnInit {
     }
     this.placeViews(0);
     this.windowScrollingService.scrollY$.subscribe(this.scrollTo);
-  }
-
-  @HostListener('scroll') onScroll() {
-    this.windowScrollingService.scrollY.next(this.viewport.nativeElement.scrollTop);
   }
 
   scrollTo = (scrollTop: number) => {
@@ -132,7 +127,7 @@ export class InfiniteScrollDirective implements AfterViewInit, OnInit {
       }
 
     for (let i = 0; i < this.heights.length; i++)
-      if (this.sum(this.heights.slice(0, i + 1)) >= scrollTop + this.viewport.nativeElement.offsetHeight) {
+      if (this.sum(this.heights.slice(0, i + 1)) >= scrollTop + this.viewportHeight) {
         endIndex = i;
         endIndexChanged = true;
         break;

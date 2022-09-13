@@ -33,4 +33,8 @@ export class InfiniteListComponent {
   raiseScroll() {
     this.windowScrollingService.scrollY.next(this.viewport.nativeElement.scrollTop);
   }
+
+  getHeight(index: number): number {
+    return Math.random() * 200 + 25;
+  }
 }

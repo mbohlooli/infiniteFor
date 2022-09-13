@@ -12,6 +12,7 @@ export class InfiniteScrollDirective implements AfterViewInit, OnInit {
   @Input('infiniteScrollOf') items: number[] = [];
   //TODO: make this dynamic
   @Input('infiniteScrollViewportHeight') viewportHeight: number = 611;
+  @Input('infiniteScrollHeight') heightFn!: (index: number) => number;
 
   totalPadding: number = 0;
   paddingBottom: number = 0;
@@ -34,7 +35,8 @@ export class InfiniteScrollDirective implements AfterViewInit, OnInit {
   ngOnInit(): void {
     console.log(this.heights);
     for (let i = 0; i < this.items.length; i++)
-      this.heights[i] = Math.random() * 200 + 25;
+      this.heights[i] = this.heightFn(i);
+    // this.heights[i] = Math.random() * 200 + 25;
     const scrollTop = 0;
     this.totalPadding = this.sum(this.heights) - this.viewportHeight;
     this.paddingTop = scrollTop;
@@ -68,19 +70,20 @@ export class InfiniteScrollDirective implements AfterViewInit, OnInit {
     let { startIndex, endIndex } = this.getVisibleRange(scrollTop);
 
 
-    console.log('new positions', startIndex, endIndex);
-    console.log('old positions', this.previousStartIndex, this.previousEndIndex);
-    console.log('scrollTop', scrollTop);
+    // console.log('new positions', startIndex, endIndex);
+    // console.log('old positions', this.previousStartIndex, this.previousEndIndex);
+    // console.log('scrollTop', scrollTop);
     if (endIndex >= this.items.length - 1 && !this.loading)
       this.loadMoreItems();
 
-    const fastScroll = this.previousEndIndex < startIndex || this.previousStartIndex > endIndex;
+    const fastScroll = this.previousEndIndex <= startIndex || this.previousStartIndex >= endIndex;
     const scrollDown = this.previousStartIndex <= startIndex;
-    const scrollUp = this.previousStartIndex > startIndex;
+    const scrollUp = this.previousStartIndex >= startIndex;
 
     if (fastScroll) {
       // ! Fix the fast scrolling when scrolling all the way to the top
-      for (let i = 0; i < this.scrollContainer.length; i++)
+      // ! Fast scroll doesn't insert the correct items
+      for (let i = this.scrollContainer.length - 1; i >= 0; i--)
         this.scrollContainer.detach(i);
       for (let i = startIndex; i <= endIndex; i++) {
         let view = this.getView(i);
@@ -162,6 +165,7 @@ export class InfiniteScrollDirective implements AfterViewInit, OnInit {
   }
 
   getView(index: number): EmbeddedViewRef<any> {
+    //TODO: change the bindings an do the actual recycling
     let view = this.map.get(index);
     if (!view) {
       view = this.listItem.createEmbeddedView({ $implicit: this.items[index], index });
@@ -181,7 +185,8 @@ export class InfiniteScrollDirective implements AfterViewInit, OnInit {
     this.getScrollContainerItemAt(originalIndex).rootNodes[0].style.transform =
       this.getPositionOnScreen(indexToPut, scrollTop);
   }
-  //? Make this an output?
+
+  // TODO: Make this an event that parent responds to
   loadMoreItems() {
     this.loading = true;
     console.log('loading more items...');
@@ -191,7 +196,7 @@ export class InfiniteScrollDirective implements AfterViewInit, OnInit {
       let addedHeight = 0;
       for (let i = 0; i < 20; i++) {
         this.items.push(this.items.length + i);
-        let newHeight = Math.random() * 200 + 25;
+        let newHeight = this.heightFn(this.items.length + i);
         addedHeight += newHeight;
         this.heights.push(newHeight);
       }

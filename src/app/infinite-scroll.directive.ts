@@ -1,4 +1,5 @@
 import { AfterViewInit, Directive, ElementRef, EmbeddedViewRef, HostListener, Input, OnInit, Renderer2, SimpleChanges, TemplateRef, ViewContainerRef, ViewRef } from '@angular/core';
+import { Recycler } from './recycler';
 import { WindowScrollingService } from './services/window-scrolling.service';
 
 
@@ -13,17 +14,18 @@ export class InfiniteScrollDirective implements AfterViewInit, OnInit {
   //TODO: make this dynamic
   @Input('infiniteScrollViewportHeight') viewportHeight: number = 611;
   @Input('infiniteScrollHeight') heightFn!: (index: number) => number;
+  @Input('infiniteScrollLoadMore') loadMoreFn!: () => void;
 
   totalPadding: number = 0;
   paddingBottom: number = 0;
   paddingTop: number = 0;
   previousStartIndex = 0;
   previousEndIndex = 0;
-  map: Map<number, ViewRef> = new Map();
   loading: boolean = false;
   initialized: boolean = false;
   previousScrollTop: number = 0;
   heights: number[] = [];
+  recycler: Recycler = new Recycler();
 
   constructor(
     private renderer: Renderer2,
@@ -83,8 +85,11 @@ export class InfiniteScrollDirective implements AfterViewInit, OnInit {
     if (fastScroll) {
       // ! Fix the fast scrolling when scrolling all the way to the top
       // ! Fast scroll doesn't insert the correct items
-      for (let i = this.scrollContainer.length - 1; i >= 0; i--)
+      for (let i = this.scrollContainer.length - 1; i >= 0; i--) {
+        let child = this.scrollContainer.get(i) as EmbeddedViewRef<any>;
         this.scrollContainer.detach(i);
+        this.recycler.recycleView(child.context.index, child);
+      }
       for (let i = startIndex; i <= endIndex; i++) {
         let view = this.getView(i);
         this.scrollContainer.insert(view);
@@ -92,8 +97,11 @@ export class InfiniteScrollDirective implements AfterViewInit, OnInit {
       }
     } else if (scrollDown) {
       if (this.loading) return;
-      for (let i = this.previousStartIndex; i < startIndex; i++)
+      for (let i = this.previousStartIndex; i < startIndex; i++) {
+        let child = this.scrollContainer.get(i - this.previousStartIndex) as EmbeddedViewRef<any>;
         this.scrollContainer.detach(i - this.previousStartIndex);
+        this.recycler.recycleView(child.context.index, child);
+      }
       for (let i = this.previousEndIndex + 1; i <= endIndex; i++) {
         let view = this.getView(i);
         this.scrollContainer.insert(view);
@@ -105,8 +113,11 @@ export class InfiniteScrollDirective implements AfterViewInit, OnInit {
         this.scrollContainer.insert(view, 0);
         view.reattach();
       }
-      for (let i = endIndex + 1; i <= startIndex + this.scrollContainer.length - 1; i++)
+      for (let i = endIndex + 1; i <= startIndex + this.scrollContainer.length - 1; i++) {
+        let child = this.scrollContainer.get(i - startIndex) as EmbeddedViewRef<any>;
         this.scrollContainer.detach(i - startIndex);
+        this.recycler.recycleView(child.context.index, child);
+      }
     }
 
     this.placeViews(scrollTop);
@@ -166,15 +177,25 @@ export class InfiniteScrollDirective implements AfterViewInit, OnInit {
 
   getView(index: number): EmbeddedViewRef<any> {
     //TODO: change the bindings an do the actual recycling
-    let view = this.map.get(index);
+    let view = this.recycler.getView(index);
+    let item = this.items[index];
     if (!view) {
-      view = this.listItem.createEmbeddedView({ $implicit: this.items[index], index });
-      this.map.set(index, view);
+      view = this.listItem.createEmbeddedView({ $implicit: item, index });
+    } else {
+      (view as EmbeddedViewRef<any>).context.$implicit = item;
+      (view as EmbeddedViewRef<any>).context.index = index;
     }
     (view as EmbeddedViewRef<any>).rootNodes[0].style.height = `${this.heights[index]}px`;
-    if (index == 0)
-      (view as EmbeddedViewRef<any>).rootNodes[0].style.backgroundColor = `red`;
     return view as EmbeddedViewRef<any>;
+    // let view = this.map.get(index);
+    // if (!view) {
+    //   view = this.listItem.createEmbeddedView({ $implicit: this.items[index], index });
+    //   this.map.set(index, view);
+    // }
+    // (view as EmbeddedViewRef<any>).rootNodes[0].style.height = `${this.heights[index]}px`;
+    // if (index == 0)
+    //   (view as EmbeddedViewRef<any>).rootNodes[0].style.backgroundColor = `red`;
+    // return view as EmbeddedViewRef<any>;
   }
 
   getScrollContainerItemAt(index: number) {
@@ -188,6 +209,7 @@ export class InfiniteScrollDirective implements AfterViewInit, OnInit {
 
   // TODO: Make this an event that parent responds to
   loadMoreItems() {
+    this.loadMoreFn();
     this.loading = true;
     console.log('loading more items...');
 

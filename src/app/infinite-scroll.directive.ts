@@ -14,7 +14,6 @@ export class InfiniteScrollDirective implements AfterViewInit, OnInit {
   //TODO: make this dynamic
   @Input('infiniteScrollViewportHeight') viewportHeight: number = 611;
   @Input('infiniteScrollHeight') heightFn!: (index: number) => number;
-  @Input('infiniteScrollLoadMore') loadMoreFn!: () => void;
 
   totalPadding: number = 0;
   paddingBottom: number = 0;
@@ -38,7 +37,7 @@ export class InfiniteScrollDirective implements AfterViewInit, OnInit {
     console.log(this.heights);
     for (let i = 0; i < this.items.length; i++)
       this.heights[i] = this.heightFn(i);
-    // this.heights[i] = Math.random() * 200 + 25;
+
     const scrollTop = 0;
     this.totalPadding = this.sum(this.heights) - this.viewportHeight;
     this.paddingTop = scrollTop;
@@ -71,10 +70,6 @@ export class InfiniteScrollDirective implements AfterViewInit, OnInit {
 
     let { startIndex, endIndex } = this.getVisibleRange(scrollTop);
 
-
-    // console.log('new positions', startIndex, endIndex);
-    // console.log('old positions', this.previousStartIndex, this.previousEndIndex);
-    // console.log('scrollTop', scrollTop);
     if (endIndex >= this.items.length - 1 && !this.loading)
       this.loadMoreItems();
 
@@ -84,7 +79,7 @@ export class InfiniteScrollDirective implements AfterViewInit, OnInit {
 
     if (fastScroll) {
       // ! Fix the fast scrolling when scrolling all the way to the top
-      // ! Fast scroll doesn't insert the correct items
+      // ? Is the delete and insert all better?
       for (let i = this.scrollContainer.length - 1; i >= 0; i--) {
         let child = this.scrollContainer.get(i) as EmbeddedViewRef<any>;
         this.scrollContainer.detach(i);
@@ -187,15 +182,6 @@ export class InfiniteScrollDirective implements AfterViewInit, OnInit {
     }
     (view as EmbeddedViewRef<any>).rootNodes[0].style.height = `${this.heights[index]}px`;
     return view as EmbeddedViewRef<any>;
-    // let view = this.map.get(index);
-    // if (!view) {
-    //   view = this.listItem.createEmbeddedView({ $implicit: this.items[index], index });
-    //   this.map.set(index, view);
-    // }
-    // (view as EmbeddedViewRef<any>).rootNodes[0].style.height = `${this.heights[index]}px`;
-    // if (index == 0)
-    //   (view as EmbeddedViewRef<any>).rootNodes[0].style.backgroundColor = `red`;
-    // return view as EmbeddedViewRef<any>;
   }
 
   getScrollContainerItemAt(index: number) {
@@ -209,7 +195,6 @@ export class InfiniteScrollDirective implements AfterViewInit, OnInit {
 
   // TODO: Make this an event that parent responds to
   loadMoreItems() {
-    this.loadMoreFn();
     this.loading = true;
     console.log('loading more items...');
 

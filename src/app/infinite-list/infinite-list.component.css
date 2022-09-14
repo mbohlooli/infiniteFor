@@ -16,4 +16,17 @@
 .list-item {
     width: 100%;
     position: absolute;
+    padding: 10px;
+}
+
+.list-item-content {
+    color: black;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    height: 90%;
+    width: 95%;
+    border: 1px solid black;
+    border-radius: 5px;
+    margin: 5px;
 }

@@ -1,13 +1,27 @@
-import { AfterViewInit, Directive, ElementRef, EmbeddedViewRef, HostListener, Input, OnInit, Renderer2, SimpleChanges, TemplateRef, ViewContainerRef, ViewRef } from '@angular/core';
+import {
+  AfterViewInit,
+  Directive,
+  DoCheck,
+  ElementRef,
+  EmbeddedViewRef,
+  Input,
+  IterableDiffer,
+  IterableDiffers,
+  OnChanges,
+  OnInit,
+  Renderer2,
+  SimpleChanges,
+  TemplateRef,
+  ViewContainerRef
+} from '@angular/core';
 import { Recycler } from './recycler';
 import { WindowScrollingService } from './services/window-scrolling.service';
 
 
-//TODO: we can use a function to get the height of each element
 @Directive({
   selector: '[infiniteScroll][infiniteScrollOf]'
 })
-export class InfiniteScrollDirective implements AfterViewInit, OnInit {
+export class InfiniteScrollDirective implements AfterViewInit, OnInit, OnChanges, DoCheck {
   //TODO: get this from somewhere else
   @Input('infiniteScrollListHolder') listHolder!: ElementRef;
   @Input('infiniteScrollOf') items: number[] = [];
@@ -25,13 +39,37 @@ export class InfiniteScrollDirective implements AfterViewInit, OnInit {
   previousScrollTop: number = 0;
   heights: number[] = [];
   recycler: Recycler = new Recycler();
+  differ!: IterableDiffer<any>;
 
   constructor(
     private renderer: Renderer2,
     private windowScrollingService: WindowScrollingService,
+    private differs: IterableDiffers,
     private listItem: TemplateRef<any>,
     private scrollContainer: ViewContainerRef
   ) { }
+
+  ngOnChanges(changes: SimpleChanges): void {
+    if (!('items' in changes)) return;
+
+    const value = changes['items'].currentValue;
+    if (this.differ || !value) return;
+
+    try {
+      this.differ = this.differs.find(value).create();
+    } catch (e) {
+      throw new Error('Error in scrolling.');
+    }
+  }
+
+  ngDoCheck(): void {
+    if (!this.differ) return;
+
+    const changes = this.differ.diff(this.items);
+    if (!changes) return;
+
+    changes.forEachOperation(console.log);
+  }
 
   ngOnInit(): void {
     console.log(this.heights);
@@ -48,7 +86,6 @@ export class InfiniteScrollDirective implements AfterViewInit, OnInit {
         this.previousEndIndex = i;
         break;
       }
-
   }
 
   ngAfterViewInit() {
@@ -171,7 +208,6 @@ export class InfiniteScrollDirective implements AfterViewInit, OnInit {
   }
 
   getView(index: number): EmbeddedViewRef<any> {
-    //TODO: change the bindings an do the actual recycling
     let view = this.recycler.getView(index);
     let item = this.items[index];
     if (!view) {

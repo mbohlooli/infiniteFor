@@ -35,6 +35,6 @@ export class InfiniteListComponent {
   }
 
   getHeight(index: number): number {
-    return Math.random() * 200 + 25;
+    return Math.random() * 150 + 25;
   }
 }

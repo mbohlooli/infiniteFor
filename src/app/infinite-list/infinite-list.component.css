@@ -17,6 +17,7 @@
     width: 100%;
     position: absolute;
     padding: 10px;
+    box-sizing: border-box;
 }
 
 .list-item-content {
@@ -28,5 +29,4 @@
     width: 95%;
     border: 1px solid black;
     border-radius: 5px;
-    margin: 5px;
 }

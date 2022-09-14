@@ -7,6 +7,7 @@ import {
   Input,
   IterableDiffer,
   IterableDiffers,
+  NgIterable,
   OnChanges,
   OnInit,
   Renderer2,
@@ -24,7 +25,8 @@ import { WindowScrollingService } from './services/window-scrolling.service';
 export class InfiniteScrollDirective implements AfterViewInit, OnInit, OnChanges, DoCheck {
   //TODO: get this from somewhere else
   @Input('infiniteScrollListHolder') listHolder!: ElementRef;
-  @Input('infiniteScrollOf') items: number[] = [];
+  @Input('infiniteScrollOf') data!: NgIterable<any>;
+  items: number[] = [];
   //TODO: make this dynamic
   @Input('infiniteScrollViewportHeight') viewportHeight: number = 611;
   @Input('infiniteScrollHeight') heightFn!: (index: number) => number;
@@ -50,9 +52,9 @@ export class InfiniteScrollDirective implements AfterViewInit, OnInit, OnChanges
   ) { }
 
   ngOnChanges(changes: SimpleChanges): void {
-    if (!('items' in changes)) return;
+    if (!('data' in changes)) return;
 
-    const value = changes['items'].currentValue;
+    const value = changes['data'].currentValue;
     if (this.differ || !value) return;
 
     try {
@@ -65,20 +67,15 @@ export class InfiniteScrollDirective implements AfterViewInit, OnInit, OnChanges
   ngDoCheck(): void {
     if (!this.differ) return;
 
-    const changes = this.differ.diff(this.items);
+    const changes = this.differ.diff(this.data);
     if (!changes) return;
-
-    changes.forEachOperation(console.log);
-  }
-
-  ngOnInit(): void {
-    console.log(this.heights);
-    for (let i = 0; i < this.items.length; i++)
-      this.heights[i] = this.heightFn(i);
-
-    const scrollTop = 0;
+    console.log(changes);
+    changes.forEachAddedItem(item => {
+      this.items.push(item.item);
+      if (item.currentIndex != null)
+        this.heights.push(this.heightFn(item.currentIndex));
+    });
     this.totalPadding = this.sum(this.heights) - this.viewportHeight;
-    this.paddingTop = scrollTop;
     this.paddingBottom = this.totalPadding - this.paddingTop;
 
     for (let i = 0; i < this.heights.length; i++)
@@ -86,6 +83,23 @@ export class InfiniteScrollDirective implements AfterViewInit, OnInit, OnChanges
         this.previousEndIndex = i;
         break;
       }
+  }
+
+  ngOnInit(): void {
+    // console.log(this.heights);
+    // for (let i = 0; i < this.items.length; i++)
+    //   this.heights[i] = this.heightFn(i);
+
+    // const scrollTop = 0;
+    // this.totalPadding = this.sum(this.heights) - this.viewportHeight;
+    // this.paddingTop = scrollTop;
+    // this.paddingBottom = this.totalPadding - this.paddingTop;
+
+    // for (let i = 0; i < this.heights.length; i++)
+    //   if (this.sum(this.heights.slice(0, i)) >= this.viewportHeight) {
+    //     this.previousEndIndex = i;
+    //     break;
+    //   }
   }
 
   ngAfterViewInit() {
@@ -237,9 +251,10 @@ export class InfiniteScrollDirective implements AfterViewInit, OnInit, OnChanges
     //TODO: fix the tiny jump
     setTimeout(() => {
       let addedHeight = 0;
+      let previousItemsCount = this.items.length;
       for (let i = 0; i < 20; i++) {
-        this.items.push(this.items.length + i);
-        let newHeight = this.heightFn(this.items.length + i);
+        this.items.push(previousItemsCount + i);
+        let newHeight = this.heightFn(previousItemsCount + i);
         addedHeight += newHeight;
         this.heights.push(newHeight);
       }

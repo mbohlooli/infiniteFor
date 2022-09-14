@@ -35,6 +35,12 @@ export class InfiniteListComponent {
   }
 
   getHeight(index: number): number {
-    return Math.random() * 150 + 25;
+    return Math.random() * 150 + 40;
+  }
+
+  addItems() {
+    for (let i = 0; i < 10; i++) {
+      this.items.push(i);
+    }
   }
 }

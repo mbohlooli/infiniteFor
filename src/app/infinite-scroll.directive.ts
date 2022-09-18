@@ -4,15 +4,18 @@ import {
   DoCheck,
   ElementRef,
   EmbeddedViewRef,
+  EventEmitter,
   Input,
   IterableDiffer,
   IterableDiffers,
   NgIterable,
   OnChanges,
   OnInit,
+  Output,
   Renderer2,
   SimpleChanges,
   TemplateRef,
+  TrackByFunction,
   ViewContainerRef
 } from '@angular/core';
 import { Recycler } from './recycler';
@@ -30,6 +33,7 @@ export class InfiniteScrollDirective implements AfterViewInit, OnInit, OnChanges
   //TODO: make this dynamic
   @Input('infiniteScrollViewportHeight') viewportHeight: number = 611;
   @Input('infiniteScrollHeight') heightFn!: (index: number) => number;
+  @Input('infiniteForTrackBy') trackByFn!: TrackByFunction<any>;
 
   totalPadding: number = 0;
   paddingBottom: number = 0;
@@ -42,6 +46,7 @@ export class InfiniteScrollDirective implements AfterViewInit, OnInit, OnChanges
   heights: number[] = [];
   recycler: Recycler = new Recycler();
   differ!: IterableDiffer<any>;
+  @Output('scrollEnd') scrollEndEvent = new EventEmitter<any>();
 
   constructor(
     private renderer: Renderer2,
@@ -58,7 +63,7 @@ export class InfiniteScrollDirective implements AfterViewInit, OnInit, OnChanges
     if (this.differ || !value) return;
 
     try {
-      this.differ = this.differs.find(value).create();
+      this.differ = this.differs.find(value).create(this.trackByFn);
     } catch (e) {
       throw new Error('Error in scrolling.');
     }
@@ -69,7 +74,7 @@ export class InfiniteScrollDirective implements AfterViewInit, OnInit, OnChanges
 
     const changes = this.differ.diff(this.data);
     if (!changes) return;
-    console.log(changes);
+    console.log('changes of data', changes);
     changes.forEachAddedItem(item => {
       this.items.push(item.item);
       if (item.currentIndex != null)
@@ -77,6 +82,7 @@ export class InfiniteScrollDirective implements AfterViewInit, OnInit, OnChanges
     });
     this.totalPadding = this.sum(this.heights) - this.viewportHeight;
     this.paddingBottom = this.totalPadding - this.paddingTop;
+    this.setPaddings();
 
     for (let i = 0; i < this.heights.length; i++)
       if (this.sum(this.heights.slice(0, i)) >= this.viewportHeight) {
@@ -86,20 +92,6 @@ export class InfiniteScrollDirective implements AfterViewInit, OnInit, OnChanges
   }
 
   ngOnInit(): void {
-    // console.log(this.heights);
-    // for (let i = 0; i < this.items.length; i++)
-    //   this.heights[i] = this.heightFn(i);
-
-    // const scrollTop = 0;
-    // this.totalPadding = this.sum(this.heights) - this.viewportHeight;
-    // this.paddingTop = scrollTop;
-    // this.paddingBottom = this.totalPadding - this.paddingTop;
-
-    // for (let i = 0; i < this.heights.length; i++)
-    //   if (this.sum(this.heights.slice(0, i)) >= this.viewportHeight) {
-    //     this.previousEndIndex = i;
-    //     break;
-    //   }
   }
 
   ngAfterViewInit() {
@@ -122,14 +114,13 @@ export class InfiniteScrollDirective implements AfterViewInit, OnInit, OnChanges
     let { startIndex, endIndex } = this.getVisibleRange(scrollTop);
 
     if (endIndex >= this.items.length - 1 && !this.loading)
-      this.loadMoreItems();
+      this.scrollEndEvent.emit();
 
     const fastScroll = this.previousEndIndex <= startIndex || this.previousStartIndex >= endIndex;
     const scrollDown = this.previousStartIndex <= startIndex;
     const scrollUp = this.previousStartIndex >= startIndex;
 
     if (fastScroll) {
-      // ! Fix the fast scrolling when scrolling all the way to the top
       // ? Is the delete and insert all better?
       for (let i = this.scrollContainer.length - 1; i >= 0; i--) {
         let child = this.scrollContainer.get(i) as EmbeddedViewRef<any>;
@@ -142,7 +133,6 @@ export class InfiniteScrollDirective implements AfterViewInit, OnInit, OnChanges
         view.reattach();
       }
     } else if (scrollDown) {
-      if (this.loading) return;
       for (let i = this.previousStartIndex; i < startIndex; i++) {
         let child = this.scrollContainer.get(i - this.previousStartIndex) as EmbeddedViewRef<any>;
         this.scrollContainer.detach(i - this.previousStartIndex);
@@ -241,28 +231,6 @@ export class InfiniteScrollDirective implements AfterViewInit, OnInit, OnChanges
   placeScrollItemAt(originalIndex: number, indexToPut: number, scrollTop: number): any {
     this.getScrollContainerItemAt(originalIndex).rootNodes[0].style.transform =
       this.getPositionOnScreen(indexToPut, scrollTop);
-  }
-
-  // TODO: Make this an event that parent responds to
-  loadMoreItems() {
-    this.loading = true;
-    console.log('loading more items...');
-
-    //TODO: fix the tiny jump
-    setTimeout(() => {
-      let addedHeight = 0;
-      let previousItemsCount = this.items.length;
-      for (let i = 0; i < 20; i++) {
-        this.items.push(previousItemsCount + i);
-        let newHeight = this.heightFn(previousItemsCount + i);
-        addedHeight += newHeight;
-        this.heights.push(newHeight);
-      }
-      this.totalPadding += addedHeight
-      this.paddingBottom += addedHeight;
-      this.setPaddings();
-      this.loading = false;
-    }, 2000);
   }
 
   sum(numbers: number[]) {

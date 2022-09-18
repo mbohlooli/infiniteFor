@@ -11,6 +11,9 @@ export class WindowScrollingService {
   constructor() { }
 
   updateScrollY(newScroll: number) {
-    this.scrollY.next(newScroll);
+    if (newScroll < 10)
+      this.scrollY.next(1);
+    else
+      this.scrollY.next(newScroll);
   }
 }

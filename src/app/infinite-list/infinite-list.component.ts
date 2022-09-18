@@ -25,22 +25,39 @@ export class InfiniteListComponent {
   map: Map<number, ViewRef> = new Map();
   loading: boolean = false;
 
+  caption = 'This is item. yeah is odd';
+
   constructor(private windowScrollingService: WindowScrollingService) {
-    for (let i = 0; i < 1000; i++)
+    for (let i = 0; i < 10; i++)
       this.items.push(i);
   }
 
   raiseScroll() {
-    this.windowScrollingService.scrollY.next(this.viewport.nativeElement.scrollTop);
+    this.windowScrollingService.updateScrollY(this.viewport.nativeElement.scrollTop)
   }
 
   getHeight(index: number): number {
-    return Math.random() * 150 + 40;
+    const h = Math.random() * 150 + 40;
+    return index % 2 == 0 ? h : 50;
   }
 
   addItems() {
-    for (let i = 0; i < 10; i++) {
-      this.items.push(i);
-    }
+    setTimeout(() => {
+      for (let i = 0; i < 10; i++) {
+        this.items.push(i);
+      }
+    }, 2000);
+  }
+
+  log() {
+    console.log('message from component');
+  }
+
+  changeHeight(e: any) {
+    this.caption = this.caption + "\r\n"
+    console.log(e.parentElement);
+    e.offsetParent.style.height = "60px";
+    e.parentElement.style.marginBottom = "10px";
+
   }
 }

@@ -26,10 +26,12 @@ export class InfiniteListComponent {
   loading: boolean = false;
 
   caption = 'This is item. yeah is odd';
+  iter = 0;
 
   constructor(private windowScrollingService: WindowScrollingService) {
     for (let i = 0; i < 10; i++)
-      this.items.push(i);
+      this.items.push(this.iter * 10 + i);
+    this.iter++;
   }
 
   raiseScroll() {
@@ -44,8 +46,9 @@ export class InfiniteListComponent {
   addItems() {
     setTimeout(() => {
       for (let i = 0; i < 10; i++) {
-        this.items.push(i);
+        this.items.push(this.iter * 10 + i);
       }
+      this.iter++;
     }, 2000);
   }
 

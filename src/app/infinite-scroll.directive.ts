@@ -31,6 +31,7 @@ export class BehkhaanInfiniteScrollDirective implements AfterViewInit, OnDestroy
   items: number[] = [];
   @Input('behkhaanInfiniteScrollHeight') heightFn!: (item: any) => number;
   @Input('behkhaanInfiniteScrollTrackBy') trackByFn!: TrackByFunction<any>;
+  @Input('behkhaanInfiniteScrollMarginalItemsToRender') marginalItemsToRender!: number;
 
   @Output('scrollEnd') scrollEndEvent = new EventEmitter<any>();
 
@@ -85,6 +86,7 @@ export class BehkhaanInfiniteScrollDirective implements AfterViewInit, OnDestroy
 
     this.totalPadding = this.sum(this.heights) - this.viewportHeight;
     this.paddingBottom = this.totalPadding - this.paddingTop;
+    this.setPaddings();
 
     let { startIndex, endIndex } = this.getVisibleRange(this.paddingTop);
     // ! End index ...
@@ -99,7 +101,7 @@ export class BehkhaanInfiniteScrollDirective implements AfterViewInit, OnDestroy
       this.scrollContainer.insert(view);
       view.reattach();
     }
-    this.placeViews(this.paddingTop);
+    // this.placeViews(this.paddingTop);
   }
 
   ngAfterViewInit() {
@@ -166,8 +168,10 @@ export class BehkhaanInfiniteScrollDirective implements AfterViewInit, OnDestroy
   }
 
   getVisibleRange(scrollTop: number) {
-    let startIndex = this.findFirstGreaterOrEqual(scrollTop - 100, 0, this.heights.length - 1);
-    let endIndex = this.findFirstGreaterOrEqual(scrollTop + this.viewportHeight + 100, startIndex, this.heights.length - 1);
+    let startIndex = this.findFirstGreaterOrEqual(scrollTop, 0, this.heights.length - 1);
+    startIndex = Math.max(0, startIndex - this.marginalItemsToRender);
+    let endIndex = this.findFirstGreaterOrEqual(scrollTop + this.viewportHeight, startIndex, this.heights.length - 1);
+    endIndex = Math.min(endIndex + this.marginalItemsToRender, this.items.length - 1);
     return { startIndex, endIndex };
   }
 

@@ -47,6 +47,7 @@ export class BehkhaanInfiniteScrollDirective implements AfterViewInit, OnDestroy
   heights: number[] = [];
   recycler: Recycler = new Recycler();
   differ!: IterableDiffer<any>;
+  firstChange = true;
 
   constructor(
     private renderer: Renderer2,
@@ -86,22 +87,31 @@ export class BehkhaanInfiniteScrollDirective implements AfterViewInit, OnDestroy
 
     this.totalPadding = this.sum(this.heights) - this.viewportHeight;
     this.paddingBottom = this.totalPadding - this.paddingTop;
-    this.setPaddings();
 
     let { startIndex, endIndex } = this.getVisibleRange(this.paddingTop);
-    // ! End index ...
-    console.log(startIndex, endIndex, this.viewportHeight);
-    for (let i = this.scrollContainer.length - 1; i >= 0; i--) {
-      let child = this.scrollContainer.get(i) as EmbeddedViewRef<any>;
-      this.scrollContainer.detach(i);
-      this.recycler.recycleView(child.context.index, child);
-    }
-    for (let i = startIndex; i <= endIndex; i++) {
+
+
+    for (let i = this.previousEndIndex; i <= endIndex; i++) {
       let view = this.getView(i);
       this.scrollContainer.insert(view);
       view.reattach();
     }
+    this.scrollTo(this.paddingTop)
+    if (this.firstChange) {
+      for (let i = this.scrollContainer.length - 1; i >= 0; i--) {
+        let child = this.scrollContainer.get(i) as EmbeddedViewRef<any>;
+        this.scrollContainer.detach(i);
+        this.recycler.recycleView(child.context.index, child);
+      }
+      for (let i = startIndex; i <= endIndex; i++) {
+        let view = this.getView(i);
+        this.scrollContainer.insert(view);
+        view.reattach();
+      }
+    }
+    // this.setPaddings();
     // this.placeViews(this.paddingTop);
+    this.firstChange = false;
   }
 
   ngAfterViewInit() {
@@ -111,6 +121,7 @@ export class BehkhaanInfiniteScrollDirective implements AfterViewInit, OnDestroy
   scrollTo = (scrollTop: number) => {
     if (!scrollTop) return;
     if (scrollTop > this.totalPadding) return;
+
     this.paddingTop = scrollTop;
     this.paddingBottom = this.totalPadding - this.paddingTop;
 

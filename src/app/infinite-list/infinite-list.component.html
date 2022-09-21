@@ -1,11 +1,11 @@
 <div class="infinite-list" #v (scroll)="raiseScroll()">
   <div class="infinite-list-holder" #l>
     <ng-template
-      infiniteScroll
+      behkhaanInfiniteScroll
       let-item
-      [infiniteScrollOf]="items"
-      [infiniteScrollListHolder]="listHolder"
-      [infiniteScrollHeight]="getHeight"
+      [behkhaanInfiniteScrollOf]="items"
+      [behkhaanInfiniteScrollListHolder]="listHolder"
+      [behkhaanInfiniteScrollHeight]="getHeight"
       (scrollEnd)="addItems()"
     >
       <div class="list-item">

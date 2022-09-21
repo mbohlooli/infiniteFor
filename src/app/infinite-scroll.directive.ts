@@ -10,9 +10,7 @@ import {
   IterableDiffers,
   NgIterable,
   OnChanges,
-  OnDestroy,
-  OnInit,
-  Output,
+  OnDestroy, Output,
   Renderer2,
   SimpleChanges,
   TemplateRef,
@@ -24,15 +22,15 @@ import { WindowScrollingService } from './services/window-scrolling.service';
 
 
 @Directive({
-  selector: '[infiniteScroll][infiniteScrollOf]'
+  selector: '[behkhaanInfiniteScroll][behkhaanInfiniteScrollOf]'
 })
-export class InfiniteScrollDirective implements AfterViewInit, OnDestroy, OnChanges, DoCheck {
+export class BehkhaanInfiniteScrollDirective implements AfterViewInit, OnDestroy, OnChanges, DoCheck {
   //TODO: get this from somewhere else
-  @Input('infiniteScrollListHolder') listHolder!: ElementRef;
-  @Input('infiniteScrollOf') data!: NgIterable<any>;
+  @Input('behkhaanInfiniteScrollListHolder') listHolder!: ElementRef;
+  @Input('behkhaanInfiniteScrollOf') data!: NgIterable<any>;
   items: number[] = [];
-  @Input('infiniteScrollHeight') heightFn!: (item: any) => number;
-  @Input('infiniteScrollTrackBy') trackByFn!: TrackByFunction<any>;
+  @Input('behkhaanInfiniteScrollHeight') heightFn!: (item: any) => number;
+  @Input('behkhaanInfiniteScrollTrackBy') trackByFn!: TrackByFunction<any>;
 
   @Output('scrollEnd') scrollEndEvent = new EventEmitter<any>();
 
@@ -102,8 +100,6 @@ export class InfiniteScrollDirective implements AfterViewInit, OnDestroy, OnChan
       view.reattach();
     }
     this.placeViews(this.paddingTop);
-    this.setPaddings();
-    console.log('check ended');
   }
 
   ngAfterViewInit() {
@@ -111,13 +107,10 @@ export class InfiniteScrollDirective implements AfterViewInit, OnDestroy, OnChan
   }
 
   scrollTo = (scrollTop: number) => {
-    console.log('calling scroll To');
-
     if (!scrollTop) return;
     if (scrollTop > this.totalPadding) return;
     this.paddingTop = scrollTop;
     this.paddingBottom = this.totalPadding - this.paddingTop;
-    this.setPaddings();
 
     let { startIndex, endIndex } = this.getVisibleRange(scrollTop);
 
@@ -165,9 +158,7 @@ export class InfiniteScrollDirective implements AfterViewInit, OnDestroy, OnChan
         this.recycler.recycleView(child.context.index, child);
       }
     }
-    console.log(this.items);
     this.placeViews(scrollTop);
-    // this.setPaddings();
 
     this.previousStartIndex = startIndex;
     this.previousEndIndex = endIndex;
@@ -175,46 +166,16 @@ export class InfiniteScrollDirective implements AfterViewInit, OnDestroy, OnChan
   }
 
   getVisibleRange(scrollTop: number) {
-    // if (!scrollTop)
-    //   return { startIndex: this.previousStartIndex, endIndex: this.previousEndIndex };
-    let startIndex = this.binarySearch(scrollTop - 100, 0, this.heights.length - 1);
-    let endIndex = this.binarySearch(scrollTop + this.viewportHeight + 100, startIndex, this.heights.length - 1);
-    console.log(startIndex, endIndex);
+    let startIndex = this.findFirstGreaterOrEqual(scrollTop - 100, 0, this.heights.length - 1);
+    let endIndex = this.findFirstGreaterOrEqual(scrollTop + this.viewportHeight + 100, startIndex, this.heights.length - 1);
     return { startIndex, endIndex };
-    // let startIndex = 0;
-    // let endIndex = 0;
-    // let endIndexChanged = false;
-
-    // for (let i = 0; i < this.heights.length; i++)
-    //   if (this.sum(this.heights.slice(0, i + 1)) >= scrollTop) {
-    //     startIndex = i;
-    //     break;
-    //   }
-
-    // for (let i = 0; i < this.heights.length; i++)
-    //   if (this.sum(this.heights.slice(0, i + 1)) >= scrollTop + this.viewportHeight) {
-    //     endIndex = i;
-    //     endIndexChanged = true;
-    //     break;
-    //   }
-
-    // if (!endIndexChanged)
-    //   endIndex = this.items.length - 1;
-    // if (scrollTop < this.heights[0])
-    //   startIndex = 0;
-    // return { startIndex, endIndex };
   }
 
   placeViews(scrollTop: number) {
     let { startIndex } = this.getVisibleRange(scrollTop);
-    let remainder = scrollTop - this.sum(this.heights.slice(0, startIndex));
-    // let pos = -remainder;
-    this.paddingTop -= remainder;
+    // ! jumps!!!
+    this.paddingTop -= scrollTop - this.sum(this.heights.slice(0, startIndex));
     this.setPaddings();
-    // for (let i = 0; i < this.scrollContainer.length; i++) {
-    //   this.getScrollContainerItemAt(i).rootNodes[0].style.transform = `translate3d(0, ${pos}px, 0)`;
-    //   pos += parseFloat(this.getScrollContainerItemAt(i).rootNodes[0].style.height.slice(0, -2));
-    // }
   }
 
   setPaddings() {
@@ -255,7 +216,7 @@ export class InfiniteScrollDirective implements AfterViewInit, OnDestroy, OnChan
     return result;
   }
 
-  binarySearch(value: number, start: number, end: number): number {
+  findFirstGreaterOrEqual(value: number, start: number, end: number): number {
     if (start > end) return end;
 
     let mid = Math.floor((start + end) / 2);
@@ -264,9 +225,9 @@ export class InfiniteScrollDirective implements AfterViewInit, OnDestroy, OnChan
     if (this.sum(this.heights.slice(0, mid - 1)) < value && this.sum(this.heights.slice(0, mid)) >= value) return mid;
 
     if (this.sum(this.heights.slice(0, mid)) > value)
-      return this.binarySearch(value, start, mid - 1);
+      return this.findFirstGreaterOrEqual(value, start, mid - 1);
 
-    return this.binarySearch(value, mid + 1, end);
+    return this.findFirstGreaterOrEqual(value, mid + 1, end);
   }
 
   ngOnDestroy(): void {

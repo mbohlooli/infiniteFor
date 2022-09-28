@@ -6,4 +6,5 @@ import { AfterViewInit, Component, ElementRef, EmbeddedViewRef, HostListener, On
   styleUrls: ['./app.component.css']
 })
 export class AppComponent {
+  title = 'scroll';
 }

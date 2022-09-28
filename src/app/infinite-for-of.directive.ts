@@ -182,9 +182,9 @@ export class InfiniteForOfDirective<T> implements OnChanges, DoCheck, OnInit, On
       for (let i = 0; i < 100; i++)
         this._heights[i] = this.heightFn(i);
     }
-
-    this._renderer.setStyle(this._infiniteList.listHolder.nativeElement, 'padding-top', `${sum(this._heights.slice(0, this._firstItemPosition))}px`);
-    this._renderer.setStyle(this._infiniteList.listHolder.nativeElement, 'padding-bottom', `${sum(this._heights.slice(this._firstItemPosition, this._heights.length - 1))}px`);
+    // TODO: think about the paddings
+    // this._renderer.setStyle(this._infiniteList.listHolder.nativeElement, 'padding-top', `${sum(this._heights.slice(0, this._firstItemPosition))}px`);
+    // this._renderer.setStyle(this._infiniteList.listHolder.nativeElement, 'padding-bottom', `${sum(this._heights.slice(this._firstItemPosition, this._heights.length - 1))}px`);
 
     this.calculateScrapViewsLimit();
     this._isInMeasure = false;
@@ -239,9 +239,9 @@ export class InfiniteForOfDirective<T> implements OnChanges, DoCheck, OnInit, On
         this.dispatchLayout(i, view, false);
       }
     }
-
-    this._renderer.setStyle(this._infiniteList.listHolder.nativeElement, 'padding-top', `${sum(this._heights.slice(0, this._firstItemPosition))}px`);
-    this._renderer.setStyle(this._infiniteList.listHolder.nativeElement, 'padding-bottom', `${sum(this._heights.slice(this._firstItemPosition, this._heights.length))}px`);
+    // ! the paddings are messing with the performance?
+    // this._renderer.setStyle(this._infiniteList.listHolder.nativeElement, 'padding-top', `${sum(this._heights.slice(0, this._firstItemPosition))}px`);
+    // this._renderer.setStyle(this._infiniteList.listHolder.nativeElement, 'padding-bottom', `${sum(this._heights.slice(this._firstItemPosition, this._heights.length))}px`);
   }
 
   findPositionInRange() {
@@ -288,7 +288,7 @@ export class InfiniteForOfDirective<T> implements OnChanges, DoCheck, OnInit, On
   }
 
   private dispatchLayout(position: number, view: ViewRef, addBefore: boolean) {
-    (view as EmbeddedViewRef<InfiniteRow>).rootNodes[0].style.height = `${this._heights[position]}px`;
+    // (view as EmbeddedViewRef<InfiniteRow>).rootNodes[0].style.height = `${this._heights[position]}px`;
     if (addBefore)
       this._viewContainerRef.insert(view, 0);
     else

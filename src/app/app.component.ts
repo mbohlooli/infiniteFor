@@ -1,4 +1,4 @@
-import { AfterViewInit, Component, ElementRef, EmbeddedViewRef, HostListener, OnInit, Renderer2, TemplateRef, ViewChild, ViewContainerRef, ViewRef } from '@angular/core';
+import { Component } from '@angular/core';
 
 @Component({
   selector: 'app-root',
@@ -7,4 +7,9 @@ import { AfterViewInit, Component, ElementRef, EmbeddedViewRef, HostListener, On
 })
 export class AppComponent {
   title = 'scroll';
+  newScrollPosition = 0;
+
+  log(x: any) {
+    console.log(x);
+  }
 }

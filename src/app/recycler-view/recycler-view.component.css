@@ -1,0 +1,25 @@
+.infinite-list {
+    overflow-y: auto;
+    overflow-x: hidden;
+    position: relative;
+    contain: layout;
+    -webkit-overflow-scrolling: touch;
+}
+
+.infinite-list .infinite-list-holder {
+    width: 100%;
+    position: relative;
+}
+
+.infinite-list.normal {
+    width: 100%;
+    height: 100%;
+}
+
+.infinite-list.hide-scrollbar {
+    position: absolute;
+    top: 0;
+    left: 0;
+    bottom: 0;
+    right: 0;
+}

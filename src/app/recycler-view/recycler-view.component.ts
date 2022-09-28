@@ -1,4 +1,4 @@
-import { AfterViewInit, Component, ElementRef, Input, OnInit, Output, ViewChild } from '@angular/core';
+import { AfterViewInit, Component, ElementRef, HostListener, Input, OnInit, Output, ViewChild } from '@angular/core';
 import { BehaviorSubject, Observable, Subscription, fromEvent as observableFromEvent, tap, debounceTime, filter, map, } from 'rxjs';
 import { getScrollBarWidth } from '../utils';
 
@@ -15,10 +15,12 @@ enum SCROLL_STATE {
   styleUrls: ['./recycler-view.component.css']
 })
 export class RecyclerViewComponent implements AfterViewInit {
-  @ViewChild('listContainer') listContainer!: ElementRef;
+  @ViewChild('listContainer', { static: true }) listContainer!: ElementRef;
+  @ViewChild('listHolder', { static: true }) listHolder!: ElementRef;
 
   @Input('newScrollPosition')
   set newScrollPosition(p: number) {
+    if (!this.listContainer) return;
     this.listContainer.nativeElement.scrollTop = p;
     if (!this.holderHeight)
       this._initialScrollTop = p;
@@ -69,7 +71,11 @@ export class RecyclerViewComponent implements AfterViewInit {
   }
 
   get holderHeightInPx(): string {
-    return this.holderHeight ? this.holderHeight + 'px' : '100%';
+    return this.holderHeight ? this.holderHeight + 'px' : '95vh';
+  }
+
+  get sizeChange(): Observable<number[]> {
+    return this._sizeChange.asObservable();
   }
 
   constructor() {
@@ -77,6 +83,8 @@ export class RecyclerViewComponent implements AfterViewInit {
   }
 
   ngAfterViewInit() {
+    console.log(this.listContainer);
+
     if (this.scrollbarStyle === 'hide-scrollbar') {
       this.listContainer.nativeElement.style.right = (0 - this.scrollbarWidth) + 'px';
       this.listContainer.nativeElement.style.paddingRight = this.scrollbarWidth + 'px';
@@ -87,7 +95,7 @@ export class RecyclerViewComponent implements AfterViewInit {
         observableFromEvent(window, 'resize')
           .subscribe(() => this.requestMeasure())
       );
-
+    //TODO: this dosent work
     this._subscription.add(
       observableFromEvent(this.listContainer.nativeElement, 'scroll')
         .pipe(
@@ -137,4 +145,9 @@ export class RecyclerViewComponent implements AfterViewInit {
     let { width, height } = this.measure();
     this._sizeChange.next([width, height]);
   }
+
+  // @HostListener('window:scroll')
+  // onScroll() {
+  //   // console.log(windowls);
+  // }
 }

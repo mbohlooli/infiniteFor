@@ -4,6 +4,7 @@
     position: relative;
     contain: layout;
     -webkit-overflow-scrolling: touch;
+    height: 95vh;
 }
 
 .infinite-list .infinite-list-holder {

@@ -2,4 +2,7 @@
   [newScrollPosition]="newScrollPosition"
   (scrollPosition)="log($event)"
 >
+  <div *infiniteFor="let item of items; let i = index; heightFn: getHeight">
+    {{ item }}
+  </div>
 </recycler-view>

@@ -1,5 +1,24 @@
-import { Directive, DoCheck, EmbeddedViewRef, Input, isDevMode, IterableChanges, IterableDiffer, IterableDiffers, NgIterable, OnChanges, OnDestroy, OnInit, Renderer2, SimpleChanges, TemplateRef, TrackByFunction, ViewContainerRef, ViewRef } from '@angular/core';
-import { filter, Subscription } from 'rxjs';
+import {
+  Directive,
+  DoCheck,
+  EmbeddedViewRef,
+  Input,
+  isDevMode,
+  IterableChanges,
+  IterableDiffer,
+  IterableDiffers,
+  NgIterable,
+  OnChanges,
+  OnDestroy,
+  OnInit,
+  Renderer2,
+  SimpleChanges,
+  TemplateRef,
+  TrackByFunction,
+  ViewContainerRef,
+  ViewRef
+} from '@angular/core';
+import { Subscription } from 'rxjs';
 import { Recycler } from './recycler';
 import { RecyclerViewComponent } from './recycler-view/recycler-view.component';
 import { sum } from './utils';
@@ -33,11 +52,8 @@ export class InfiniteForOfDirective<T> implements OnChanges, DoCheck, OnInit, On
 
   @Input('infiniteForTrackBy')
   set trackBy(fn: TrackByFunction<T>) {
-    if (isDevMode() && fn != null && typeof fn !== 'function')
-      if (<any>console && <any>console.warn)
-        console.warn(
-          `trackBy must be a function, but received ${JSON.stringify(fn)}. ` +
-          `See https://angular.io/docs/ts/latest/api/common/index/NgFor-directive.html#!#change-propagation for more information.`);
+    if (isDevMode() && fn != null && typeof fn !== 'function' && <any>console && <any>console.warn)
+      console.warn(`trackBy must be a function, but received ${JSON.stringify(fn)}.`);
 
     this._trackByFn = fn;
   }
@@ -50,7 +66,9 @@ export class InfiniteForOfDirective<T> implements OnChanges, DoCheck, OnInit, On
 
   @Input('infiniteForHeightFn') heightFn!: (index: number) => number;
 
-  @Input('limit') limit = 8;
+  @Input('infiniteForLimit') limit = 8;
+
+  @Input('infiniteForOnScrollEnd') scrollEnd!: () => void;
 
   private _scrollY!: number;
 
@@ -72,8 +90,10 @@ export class InfiniteForOfDirective<T> implements OnChanges, DoCheck, OnInit, On
   private _invalidate: boolean = true;
 
   private _pendingMeasurement!: number;
+  private _loading = false;
 
   private _recycler = new Recycler();
+
 
   constructor(
     private _infiniteList: RecyclerViewComponent,
@@ -155,6 +175,8 @@ export class InfiniteForOfDirective<T> implements OnChanges, DoCheck, OnInit, On
       isMeasurementRequired = true;
     }
 
+    this._loading = false;
+
     if (isMeasurementRequired)
       this.requestMeasure();
 
@@ -178,13 +200,6 @@ export class InfiniteForOfDirective<T> implements OnChanges, DoCheck, OnInit, On
 
   private measure() {
     this._isInMeasure = true;
-    if (this._heights.length == 0) {
-      for (let i = 0; i < 100; i++)
-        this._heights[i] = this.heightFn(i);
-    }
-    // TODO: think about the paddings
-    // this._renderer.setStyle(this._infiniteList.listHolder.nativeElement, 'padding-top', `${sum(this._heights.slice(0, this._firstItemPosition))}px`);
-    // this._renderer.setStyle(this._infiniteList.listHolder.nativeElement, 'padding-bottom', `${sum(this._heights.slice(this._firstItemPosition, this._heights.length - 1))}px`);
 
     this.calculateScrapViewsLimit();
     this._isInMeasure = false;
@@ -199,6 +214,7 @@ export class InfiniteForOfDirective<T> implements OnChanges, DoCheck, OnInit, On
     let { width, height } = this._infiniteList.measure();
     this._containerWidth = width;
     this._containerHeight = height;
+
     if (!this._collection || this._collection.length === 0) {
       for (let i = 0; i < this._viewContainerRef.length; i++) {
         this._viewContainerRef.detach(i);
@@ -209,12 +225,14 @@ export class InfiniteForOfDirective<T> implements OnChanges, DoCheck, OnInit, On
       return;
     }
     this.findPositionInRange();
+
     for (let i = 0; i < this._viewContainerRef.length; i++) {
       let child = <EmbeddedViewRef<InfiniteRow>>this._viewContainerRef.get(i);
       this._viewContainerRef.detach(i);
       this._recycler.recycleView(child.context.index, child);
       i--;
     }
+
     this.insertViews();
     this._recycler.pruneScrapViews();
     this._isInLayout = false;
@@ -222,6 +240,11 @@ export class InfiniteForOfDirective<T> implements OnChanges, DoCheck, OnInit, On
   }
 
   insertViews() {
+    if (this._lastItemPosition >= this._collection.length - 1 && !this._loading) {
+      this._loading = true;
+      this.scrollEnd();
+    }
+
     if (this._viewContainerRef.length > 0) {
       let firstChild = <EmbeddedViewRef<InfiniteRow>>this._viewContainerRef.get(0);
       let lastChild = <EmbeddedViewRef<InfiniteRow>>this._viewContainerRef.get(this._viewContainerRef.length - 1);
@@ -240,28 +263,31 @@ export class InfiniteForOfDirective<T> implements OnChanges, DoCheck, OnInit, On
       }
     }
     // ! the paddings are messing with the performance?
-    // this._renderer.setStyle(this._infiniteList.listHolder.nativeElement, 'padding-top', `${sum(this._heights.slice(0, this._firstItemPosition))}px`);
-    // this._renderer.setStyle(this._infiniteList.listHolder.nativeElement, 'padding-bottom', `${sum(this._heights.slice(this._firstItemPosition, this._heights.length))}px`);
+    // TODO: can do sth that we get smooth dynamic heighting?
+    this._renderer.setStyle(this._infiniteList.listHolder.nativeElement, 'padding-top', `${sum(this._heights.slice(0, this._firstItemPosition))}px`);
+    this._renderer.setStyle(this._infiniteList.listHolder.nativeElement, 'padding-bottom', `${sum(this._heights.slice(this._firstItemPosition, this._heights.length)) - this._containerHeight}px`);
   }
 
   findPositionInRange() {
     let endIndexChanged = false;
-    if (this._heights.length == 0) {
-      for (let i = 0; i < this._collection.length; i++)
-        this._heights[i] = this.heightFn(i);
-    }
 
-    for (let i = 0; i < this._heights.length; i++)
-      if (sum(this._heights.slice(0, i + 1)) >= this._scrollY) {
+    let sum = 0;
+    for (let i = 0; i < this._heights.length; i++) {
+      if (sum >= this._scrollY) {
         this._firstItemPosition = i;
         break;
       }
-    for (let i = 0; i < this._heights.length; i++)
-      if (sum(this._heights.slice(0, i + 1)) >= this._scrollY + this._containerHeight) {
+      sum += this.heightFn(i);
+    }
+
+    for (let i = this._firstItemPosition; i < this._heights.length; i++) {
+      if (sum >= this._scrollY + this._containerHeight) {
         this._lastItemPosition = i;
         endIndexChanged = true;
         break;
       }
+      sum += this.heightFn(i);
+    }
 
     if (!endIndexChanged && this._firstItemPosition != 0)
       this._lastItemPosition = this._collection.length - 1;

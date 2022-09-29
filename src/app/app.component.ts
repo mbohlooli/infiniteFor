@@ -12,7 +12,7 @@ export class AppComponent {
   items: number[] = [];
 
   constructor() {
-    for (let i = 0; i < 1000; i++)
+    for (let i = 0; i < 10000; i++)
       this.items.push(i);
   }
 
@@ -21,7 +21,12 @@ export class AppComponent {
     return 130;
   }
 
-  log(x: any) {
-    // console.log(x);
+  log = () => {
+    let initialLength = this.items.length;
+
+    for (let i = 0; i < 10; i++)
+      this.items.push(initialLength + i)
+
+    console.log(this.items)
   }
 }

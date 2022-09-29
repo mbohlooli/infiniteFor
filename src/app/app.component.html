@@ -1,9 +1,11 @@
-<recycler-view
-  [newScrollPosition]="newScrollPosition"
-  (scrollPosition)="log($event)"
->
+<recycler-view [newScrollPosition]="newScrollPosition">
   <div
-    *infiniteFor="let item of items; let i = index; heightFn: getHeight"
+    *infiniteFor="
+      let item of items;
+      let i = index;
+      heightFn: getHeight;
+      onScrollEnd: log
+    "
     [style.height.px]="getHeight(i)"
   >
     {{ item }}

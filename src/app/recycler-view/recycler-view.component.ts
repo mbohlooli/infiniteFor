@@ -83,11 +83,9 @@ export class RecyclerViewComponent implements AfterViewInit {
   }
 
   ngAfterViewInit() {
-    console.log(this.listContainer);
-
     if (this.scrollbarStyle === 'hide-scrollbar') {
-      this.listContainer.nativeElement.style.right = (0 - this.scrollbarWidth) + 'px';
-      this.listContainer.nativeElement.style.paddingRight = this.scrollbarWidth + 'px';
+      this.listContainer.nativeElement.style.right = `${-this.scrollbarWidth}px`;
+      this.listContainer.nativeElement.style.paddingRight = `${this.scrollbarWidth}px`;
     }
 
     if (window)
@@ -95,7 +93,7 @@ export class RecyclerViewComponent implements AfterViewInit {
         observableFromEvent(window, 'resize')
           .subscribe(() => this.requestMeasure())
       );
-    //TODO: this dosent work
+
     this._subscription.add(
       observableFromEvent(this.listContainer.nativeElement, 'scroll')
         .pipe(

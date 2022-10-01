@@ -24,7 +24,7 @@ import { RecyclerViewComponent } from './recycler-view/recycler-view.component';
 import { sum } from './utils';
 
 export class InfiniteRow {
-  constructor(public $implicit: any, public index: number, public count: number, public height: number) {
+  constructor(public $implicit: any, public index: number, public count: number) {
   }
 
   get first(): boolean {
@@ -228,13 +228,6 @@ export class InfiniteForOfDirective<T> implements OnChanges, DoCheck, OnInit, On
 
     for (let i = 0; i < this._viewContainerRef.length; i++) {
       let child = <EmbeddedViewRef<InfiniteRow>>this._viewContainerRef.get(i);
-      if (!this._accurateHeightIndexes.includes(i)) {
-        let actualHeight = child.rootNodes[0].clientHeight;
-        child.context.height = actualHeight;
-        this._heights[i] = actualHeight;
-        this._accurateHeightIndexes.push(i);
-        this.requestLayout();
-      }
       this._viewContainerRef.detach(i);
       this._recycler.recycleView(child.context.index, child);
       i--;
@@ -311,7 +304,7 @@ export class InfiniteForOfDirective<T> implements OnChanges, DoCheck, OnInit, On
     let item = this._collection[position];
     let count = this._collection.length;
     if (!view)
-      view = this._template.createEmbeddedView(new InfiniteRow(item, position, count, this.heightFn(position)));
+      view = this._template.createEmbeddedView(new InfiniteRow(item, position, count));
     else {
       (view as EmbeddedViewRef<InfiniteRow>).context.$implicit = item;
       (view as EmbeddedViewRef<InfiniteRow>).context.index = position;

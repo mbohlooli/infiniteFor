@@ -12,13 +12,12 @@ export class AppComponent {
   items: number[] = [];
 
   constructor() {
-    for (let i = 0; i < 10000; i++)
+    for (let i = 0; i < 1000; i++)
       this.items.push(i);
   }
 
   getHeight(index: number) {
-    if (index % 2 == 0) return 50;
-    return 130;
+    return (index % 2 == 0) ? 210 : 108;
   }
 
   log = () => {

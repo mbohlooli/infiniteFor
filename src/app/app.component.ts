@@ -28,11 +28,13 @@ export class AppComponent {
   }
 
   log = () => {
-    let initialLength = this.items.length;
+    setTimeout(() => {
+      let initialLength = this.items.length;
 
-    for (let i = 0; i < 10; i++)
-      this.items.push(initialLength + i)
+      for (let i = 0; i < 10; i++)
+        this.items.push(initialLength + i)
 
-    console.log(this.items)
+      console.log(this.items)
+    }, 2000);
   }
 }

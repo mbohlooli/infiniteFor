@@ -1,14 +1,17 @@
 .infinite-list {
-    overflow-y: auto;
-    overflow-x: hidden;
+    display: flex;
+    justify-content: flex-start;
+    flex-direction: column;
+    align-items: stretch;
+    align-content: stretch;
+    box-sizing: border-box;
     position: relative;
-    contain: layout;
-    -webkit-overflow-scrolling: touch;
-    height: 95vh;
 }
 
 .infinite-list .infinite-list-holder {
     width: 100%;
+    display: flex;
+    flex-direction: column;
     position: relative;
 }
 

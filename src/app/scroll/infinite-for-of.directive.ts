@@ -70,6 +70,8 @@ export class InfiniteForOfDirective<T> implements OnChanges, DoCheck, OnInit, On
 
   @Input('infiniteForOnScrollEnd') scrollEnd!: () => void;
 
+  @Input('infiniteForItemSize') itemSize: number | undefined;
+
   private _scrollY!: number;
 
   private _differ!: IterableDiffer<T>;
@@ -78,7 +80,7 @@ export class InfiniteForOfDirective<T> implements OnChanges, DoCheck, OnInit, On
 
   private _collection!: any[];
   private _heights: number[] = [];
-  private _accurateHeightIndexes: number[] = [];
+  private _positions: number[] = [];
 
   private _firstItemPosition!: number;
   private _lastItemPosition!: number;
@@ -179,12 +181,19 @@ export class InfiniteForOfDirective<T> implements OnChanges, DoCheck, OnInit, On
       this._collection[record.currentIndex] = record.item;
     });
 
-    for (let i = 0; i < this._collection.length; i++) {
-      this._heights[i] = this.heightFn(this._collection[i]);
-      isMeasurementRequired = true;
+    if (!this.itemSize) {
+      let position = 0;
+      for (let i = 0; i < this._collection.length; i++) {
+        this._heights[i] = this.heightFn(this._collection[i]);
+        this._positions[i] = position;
+        position += this._heights[i];
+        isMeasurementRequired = true;
+      }
+      this._averageHeight = Math.floor(sum(this._heights) / this._heights.length);
+    } else {
+      this._averageHeight = this.itemSize;
     }
 
-    this._averageHeight = Math.floor(sum(this._heights) / this._heights.length);
     this._paddingBottom += this._averageHeight * addedCount;
     this._renderer.setStyle(this._infiniteList.listHolder?.nativeElement, "padding-bottom", `${this._paddingBottom}px`);
 
@@ -200,14 +209,14 @@ export class InfiniteForOfDirective<T> implements OnChanges, DoCheck, OnInit, On
     if (this._isInMeasure || this._isInLayout) {
       clearTimeout(this._pendingMeasurement);
       this._pendingMeasurement =
-        window.setTimeout(() => this.requestMeasure(), 60);
+        window.setTimeout(this.requestMeasure, 60);
       return;
     }
     this.measure();
   }
 
   private requestLayout() {
-    if (!this._isInMeasure && this._heights && this._heights.length !== 0)
+    if (!this._isInMeasure && ((this._heights && this._heights.length !== 0) || this.itemSize))
       this.layout();
   }
 
@@ -257,7 +266,6 @@ export class InfiniteForOfDirective<T> implements OnChanges, DoCheck, OnInit, On
     let isFastScroll = this._previousStartIndex > this._lastItemPosition || this._previousEndIndex < this._firstItemPosition;
 
     if (isFastScroll) {
-      this.findPositionInRange();
       for (let i = 0; i < this._viewContainerRef.length; i++) {
         let child = <EmbeddedViewRef<InfiniteRow>>this._viewContainerRef.get(i);
         this._viewContainerRef.detach(i);
@@ -266,19 +274,18 @@ export class InfiniteForOfDirective<T> implements OnChanges, DoCheck, OnInit, On
       }
       for (let i = this._firstItemPosition; i < this._lastItemPosition; i++) {
         let view = this.getView(i);
-        this.dispatchLayout(i, view, false);
+        this.dispatchLayout(view);
       }
-      this._paddingTop = sum(this._heights.slice(0, this._firstItemPosition));
-      this._paddingBottom = this._averageHeight * (this._heights.length - this._lastItemPosition);
+      this._paddingTop = (this.itemSize) ? this.itemSize * this._firstItemPosition : sum(this._heights.slice(0, this._firstItemPosition));
+      this._paddingBottom = this._averageHeight * (this._collection.length - this._lastItemPosition);
     } else if (isScrollUp) {
       for (let i = this._previousStartIndex - 1; i >= this._firstItemPosition; i--) {
         let view = this.getView(i);
-        this.dispatchLayout(i, view, true);
-        this._paddingTop -= this._heights[i];
+        this.dispatchLayout(view, true);
+        this._paddingTop -= (this.itemSize) ? this.itemSize : this._heights[i];
       }
       for (let i = this._lastItemPosition; i < this._previousEndIndex; i++) {
         let child = <EmbeddedViewRef<InfiniteRow>>this._viewContainerRef.get(this._viewContainerRef.length - 1);
-        let height = child.rootNodes[0].clientHeight;
         this._viewContainerRef.detach(this._viewContainerRef.length - 1);
         this._paddingBottom += this._averageHeight;
         this._recycler.recycleView(child.context.index, child);
@@ -286,49 +293,48 @@ export class InfiniteForOfDirective<T> implements OnChanges, DoCheck, OnInit, On
     } else if (isScrollDown) {
       for (let i = this._previousStartIndex; i < this._firstItemPosition; i++) {
         let child = <EmbeddedViewRef<InfiniteRow>>this._viewContainerRef.get(0);
-        let height = child.rootNodes[0].clientHeight;
         this._viewContainerRef.detach(0);
-        this._paddingTop += this._heights[i];
+        this._paddingTop += (this.itemSize) ? this.itemSize : this._heights[i];
         this._recycler.recycleView(child.context.index, child);
       }
       for (let i = this._previousEndIndex; i < this._lastItemPosition; i++) {
         let view = this.getView(i);
-        this.dispatchLayout(i, view, false);
+        this.dispatchLayout(view);
         this._paddingBottom -= this._averageHeight;
       }
-      console.log(this._lastItemPosition)
     }
   }
 
   findPositionInRange() {
-    let endIndexChanged = false;
-
-    let sum = 0;
-    for (let i = 0; i < this._heights.length; i++) {
-      if (sum >= this._scrollY) {
-        this._firstItemPosition = i;
-        break;
-      }
-      sum += this.heightFn(i);
+    if (!this.itemSize) {
+      this._firstItemPosition = this.findFirstGreaterOrEqual(this._scrollY, 0, this._positions.length);
+      this._lastItemPosition = this.findFirstGreaterOrEqual(this._scrollY + window.innerHeight, this._firstItemPosition, this._positions.length);
+    } else {
+      this._firstItemPosition = Math.floor(this._scrollY / this.itemSize);
+      this._lastItemPosition = Math.ceil((this._scrollY + window.innerHeight) / this.itemSize);
     }
-
-    for (let i = this._firstItemPosition; i < this._heights.length; i++) {
-      if (sum >= this._scrollY + this._containerHeight) {
-        this._lastItemPosition = i;
-        endIndexChanged = true;
-        break;
-      }
-      sum += this.heightFn(i);
-    }
-
-    if (!endIndexChanged && this._firstItemPosition != 0)
-      this._lastItemPosition = this._collection.length;
-
-    if (this._scrollY < this._heights[0])
-      this._firstItemPosition = 0;
 
     this._firstItemPosition = Math.max(this._firstItemPosition - 1, 0);
     this._lastItemPosition = Math.min(this._lastItemPosition + 1, this._collection.length);
+
+    if (!this._loading && this._lastItemPosition == this._collection.length) {
+      this.scrollEnd();
+      this._loading = true;
+    }
+  }
+
+  findFirstGreaterOrEqual(value: number, start: number, end: number): number {
+    if (start > end) return end;
+
+    let mid = Math.floor((start + end) / 2);
+    if (mid == 0) return 0;
+
+    if (this._positions[mid - 1] < value && this._positions[mid] >= value) return mid;
+
+    if (this._positions[mid] > value)
+      return this.findFirstGreaterOrEqual(value, start, mid - 1);
+
+    return this.findFirstGreaterOrEqual(value, mid + 1, end);
   }
 
   private getView(position: number): ViewRef {
@@ -346,7 +352,7 @@ export class InfiniteForOfDirective<T> implements OnChanges, DoCheck, OnInit, On
   }
 
   // TODO: make default value for addBefore and remove unused arguments
-  private dispatchLayout(position: number, view: ViewRef, addBefore: boolean) {
+  private dispatchLayout(view: ViewRef, addBefore: boolean = false) {
     if (addBefore)
       this._viewContainerRef.insert(view, 0);
     else

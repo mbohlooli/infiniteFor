@@ -95,14 +95,14 @@ export class RecyclerViewComponent implements AfterViewInit {
       );
 
     this._subscription.add(
-      observableFromEvent(this.listContainer.nativeElement, 'scroll')
+      observableFromEvent(window, 'scroll')
         .pipe(
           filter(() => {
             if (!this._ignoreScrollEvent) return true;
             this._ignoreScrollEvent = false;
             return false;
           }),
-          map(() => this.listContainer.nativeElement.scrollTop),
+          map(() => window.scrollY),
         )
         .subscribe((scrollY: number) => this._scrollPosition.next(scrollY))
     );

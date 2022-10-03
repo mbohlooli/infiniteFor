@@ -1,23 +1,5 @@
 <div class="infinite-list" #listContainer [ngClass]="scrollbarStyle">
-  <div
-    class="infinite-list-holder"
-    [style.height]="holderHeightInPx"
-    #listHolder
-  >
+  <div class="infinite-list-holder" #listHolder>
     <ng-content></ng-content>
   </div>
 </div>
-
-<!-- <div #listContainer (scroll)="onScroll()" style="overflow-y: auto">
-  <div
-    style="height: 100px"
-    *ngFor="
-      let item of [
-        1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 11, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1,
-        1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1
-      ]
-    "
-  >
-    {{ item }}
-  </div>
-</div> -->

@@ -1,12 +1,13 @@
 <recycler-view [newScrollPosition]="newScrollPosition">
   <div
+    class="list-item"
     *infiniteFor="
       let item of items;
       let i = index;
       heightFn: getHeight;
       onScrollEnd: log
     "
-    [style.height.px]="getHeight(i)"
+    [style.height.px]="getHeightWithNoise(i)"
   >
     {{ item }}
   </div>

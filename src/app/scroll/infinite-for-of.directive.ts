@@ -86,6 +86,10 @@ export class InfiniteForOfDirective<T> implements OnChanges, DoCheck, OnInit, On
   private _containerWidth!: number;
   private _containerHeight!: number;
 
+  private _paddingTop: number = 0;
+  private _paddingBottom: number = 0;
+  private _averageHeight: number = 0;
+
   private _isInLayout: boolean = false;
   private _isInMeasure: boolean = false;
   private _invalidate: boolean = true;
@@ -94,6 +98,9 @@ export class InfiniteForOfDirective<T> implements OnChanges, DoCheck, OnInit, On
   private _loading = false;
 
   private _recycler = new Recycler();
+
+  private _previousStartIndex = 0;
+  private _previousEndIndex = 0;
 
   constructor(
     private _infiniteList: RecyclerViewComponent,
@@ -154,10 +161,12 @@ export class InfiniteForOfDirective<T> implements OnChanges, DoCheck, OnInit, On
 
     let isMeasurementRequired = false;
 
+    let addedCount = 0;
     changes.forEachOperation((item, adjustedPreviousIndex, currentIndex) => {
       if (item.previousIndex == null) {
         isMeasurementRequired = true;
         this._collection.splice(currentIndex || 0, 0, item.item);
+        addedCount++;
       } else if (currentIndex == null) {
         isMeasurementRequired = true;
         this._collection.splice(adjustedPreviousIndex || 0, 1);
@@ -174,6 +183,10 @@ export class InfiniteForOfDirective<T> implements OnChanges, DoCheck, OnInit, On
       this._heights[i] = this.heightFn(this._collection[i]);
       isMeasurementRequired = true;
     }
+
+    this._averageHeight = Math.floor(sum(this._heights) / this._heights.length);
+    this._paddingBottom += this._averageHeight * addedCount;
+    this._renderer.setStyle(this._infiniteList.listHolder?.nativeElement, "padding-bottom", `${this._paddingBottom}px`);
 
     this._loading = false;
 
@@ -224,48 +237,67 @@ export class InfiniteForOfDirective<T> implements OnChanges, DoCheck, OnInit, On
       this._invalidate = false;
       return;
     }
+
     this.findPositionInRange();
-
-    for (let i = 0; i < this._viewContainerRef.length; i++) {
-      let child = <EmbeddedViewRef<InfiniteRow>>this._viewContainerRef.get(i);
-      this._viewContainerRef.detach(i);
-      this._recycler.recycleView(child.context.index, child);
-      i--;
-    }
-
     this.insertViews();
+
     this._recycler.pruneScrapViews();
     this._isInLayout = false;
     this._invalidate = false;
+    this._previousStartIndex = this._firstItemPosition;
+    this._previousEndIndex = this._lastItemPosition;
+
+    this._renderer.setStyle(this._infiniteList.listHolder?.nativeElement, 'padding-top', `${this._paddingTop}px`);
+    this._renderer.setStyle(this._infiniteList.listHolder?.nativeElement, 'padding-bottom', `${this._paddingBottom}px`);
   }
 
   insertViews() {
-    if (this._lastItemPosition >= this._collection.length - 1 && !this._loading) {
-      this._loading = true;
-      this.scrollEnd();
-    }
+    let isScrollUp = this._previousStartIndex > this._firstItemPosition || this._previousEndIndex > this._lastItemPosition;
+    let isScrollDown = this._previousStartIndex < this._firstItemPosition || this._previousEndIndex < this._lastItemPosition;
+    let isFastScroll = this._previousStartIndex > this._lastItemPosition || this._previousEndIndex < this._firstItemPosition;
 
-    if (this._viewContainerRef.length > 0) {
-      let firstChild = <EmbeddedViewRef<InfiniteRow>>this._viewContainerRef.get(0);
-      let lastChild = <EmbeddedViewRef<InfiniteRow>>this._viewContainerRef.get(this._viewContainerRef.length - 1);
-      for (let i = firstChild.context.index - 1; i >= this._firstItemPosition; i--) {
+    if (isFastScroll) {
+      this.findPositionInRange();
+      for (let i = 0; i < this._viewContainerRef.length; i++) {
+        let child = <EmbeddedViewRef<InfiniteRow>>this._viewContainerRef.get(i);
+        this._viewContainerRef.detach(i);
+        this._recycler.recycleView(child.context.index, child);
+        i--;
+      }
+      for (let i = this._firstItemPosition; i < this._lastItemPosition; i++) {
+        let view = this.getView(i);
+        this.dispatchLayout(i, view, false);
+      }
+      this._paddingTop = sum(this._heights.slice(0, this._firstItemPosition));
+      this._paddingBottom = this._averageHeight * (this._heights.length - this._lastItemPosition);
+    } else if (isScrollUp) {
+      for (let i = this._previousStartIndex - 1; i >= this._firstItemPosition; i--) {
         let view = this.getView(i);
         this.dispatchLayout(i, view, true);
+        this._paddingTop -= this._heights[i];
       }
-      for (let i = lastChild.context.index + 1; i <= this._lastItemPosition; i++) {
+      for (let i = this._lastItemPosition; i < this._previousEndIndex; i++) {
+        let child = <EmbeddedViewRef<InfiniteRow>>this._viewContainerRef.get(this._viewContainerRef.length - 1);
+        let height = child.rootNodes[0].clientHeight;
+        this._viewContainerRef.detach(this._viewContainerRef.length - 1);
+        this._paddingBottom += this._averageHeight;
+        this._recycler.recycleView(child.context.index, child);
+      }
+    } else if (isScrollDown) {
+      for (let i = this._previousStartIndex; i < this._firstItemPosition; i++) {
+        let child = <EmbeddedViewRef<InfiniteRow>>this._viewContainerRef.get(0);
+        let height = child.rootNodes[0].clientHeight;
+        this._viewContainerRef.detach(0);
+        this._paddingTop += this._heights[i];
+        this._recycler.recycleView(child.context.index, child);
+      }
+      for (let i = this._previousEndIndex; i < this._lastItemPosition; i++) {
         let view = this.getView(i);
         this.dispatchLayout(i, view, false);
+        this._paddingBottom -= this._averageHeight;
       }
-    } else {
-      for (let i = this._firstItemPosition; i <= this._lastItemPosition; i++) {
-        let view = this.getView(i);
-        this.dispatchLayout(i, view, false);
-      }
+      console.log(this._lastItemPosition)
     }
-    // ! the paddings are messing with the performance?
-    // TODO: can do sth that we get smooth dynamic heighting?
-    this._renderer.setStyle(this._infiniteList.listHolder.nativeElement, 'padding-top', `${sum(this._heights.slice(0, this._firstItemPosition))}px`);
-    this._renderer.setStyle(this._infiniteList.listHolder.nativeElement, 'padding-bottom', `${sum(this._heights.slice(this._firstItemPosition, this._heights.length)) - this._containerHeight}px`);
   }
 
   findPositionInRange() {
@@ -290,13 +322,13 @@ export class InfiniteForOfDirective<T> implements OnChanges, DoCheck, OnInit, On
     }
 
     if (!endIndexChanged && this._firstItemPosition != 0)
-      this._lastItemPosition = this._collection.length - 1;
+      this._lastItemPosition = this._collection.length;
 
     if (this._scrollY < this._heights[0])
       this._firstItemPosition = 0;
 
     this._firstItemPosition = Math.max(this._firstItemPosition - 1, 0);
-    this._lastItemPosition = Math.min(this._lastItemPosition + 1, this._collection.length - 1);
+    this._lastItemPosition = Math.min(this._lastItemPosition + 1, this._collection.length);
   }
 
   private getView(position: number): ViewRef {
@@ -313,6 +345,7 @@ export class InfiniteForOfDirective<T> implements OnChanges, DoCheck, OnInit, On
     return view;
   }
 
+  // TODO: make default value for addBefore and remove unused arguments
   private dispatchLayout(position: number, view: ViewRef, addBefore: boolean) {
     if (addBefore)
       this._viewContainerRef.insert(view, 0);
